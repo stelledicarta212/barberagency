@@ -34,6 +34,15 @@ type AccountSummary = {
   planRenewal?: string;
 };
 
+type OnboardingDraft = {
+  accesos?: {
+    admin?: {
+      nombre?: string;
+      email?: string;
+    };
+  };
+};
+
 const navItems: NavItem[] = [
   { href: "/barberia", label: "Mi barberia", icon: Building2 },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -68,6 +77,29 @@ function isActiveStatus(status: string) {
   );
 }
 
+function readOnboardingAdminAccount() {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = localStorage.getItem("ba_onboarding_barberia");
+    if (!raw) return null;
+
+    const draft = JSON.parse(raw) as OnboardingDraft;
+    const name = clean(draft?.accesos?.admin?.nombre);
+    const email = clean(draft?.accesos?.admin?.email);
+    if (!name && !email) return null;
+
+    return {
+      name,
+      email,
+      planName: "Sin plan",
+      planStatus: "Pendiente",
+    } satisfies AccountSummary;
+  } catch {
+    return null;
+  }
+}
+
 function NavLink({
   href,
   label,
@@ -93,6 +125,8 @@ function NavLink({
 export function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const isOnboardingRoute =
+    pathname === "/barberia" || pathname.startsWith("/barberia/");
   const [mobileAccountOpen, setMobileAccountOpen] = useState(false);
   const [account, setAccount] = useState<AccountSummary | null>(() => {
     if (typeof window === "undefined") return null;
@@ -113,7 +147,7 @@ export function SidebarNav() {
       (localPlanName === "Sin plan" ? "Pendiente" : "Activo");
     const localPlanRenewal = clean(localStorage.getItem("ba_plan_renovacion"));
 
-    if (!localName && !localEmail) return null;
+    if (!localName && !localEmail) return readOnboardingAdminAccount();
 
     return {
       name: localName,
@@ -255,13 +289,29 @@ export function SidebarNav() {
                     </button>
                   </>
                 ) : (
-                  <Link
-                    href="/login"
-                    onClick={() => setMobileAccountOpen(false)}
-                    className="mt-2 inline-flex w-full items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] px-3 py-2 text-xs font-semibold text-zinc-200"
-                  >
-                    Ir a login
-                  </Link>
+                  <>
+                    <p className="mt-2 text-xs text-zinc-300">
+                      Primero completa la creacion de la barberia. Luego inicia sesion con las
+                      credenciales creadas.
+                    </p>
+                    {isOnboardingRoute ? (
+                      <button
+                        type="button"
+                        onClick={() => setMobileAccountOpen(false)}
+                        className="mt-2 inline-flex w-full items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] px-3 py-2 text-xs font-semibold text-zinc-200"
+                      >
+                        Continuar onboarding
+                      </button>
+                    ) : (
+                      <Link
+                        href="/login"
+                        onClick={() => setMobileAccountOpen(false)}
+                        className="mt-2 inline-flex w-full items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] px-3 py-2 text-xs font-semibold text-zinc-200"
+                      >
+                        Ir a login
+                      </Link>
+                    )}
+                  </>
                 )}
               </div>
             ) : null}
