@@ -130,6 +130,12 @@ function isMissingColumnError(message: string, column: string) {
   );
 }
 
+function isUniqueConstraintError(message: string, constraintName: string) {
+  const msg = clean(message).toLowerCase();
+  const constraint = constraintName.toLowerCase();
+  return msg.includes("duplicate key value violates unique constraint") && msg.includes(constraint);
+}
+
 async function requestPostgrest<T>(
   path: string,
   options: {
@@ -247,67 +253,75 @@ async function ensureBarberia(params: {
   timezone: string;
   slotMin: number;
 }) {
-  const existing = await requestPostgrest<BarberiaRow[]>(
-    `barberias?select=id,owner_id,slug&slug=eq.${encodeURIComponent(params.slug)}&limit=1`,
-    { token: params.ownerToken },
-  );
-
+  const baseSlug = clean(params.slug) || "barberia";
   let includeTimezone = true;
   let includeSlotMin = true;
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const body: Record<string, unknown> = {
-      nombre: params.nombre,
-      slug: params.slug,
-      owner_id: params.ownerId,
-    };
-    if (includeTimezone) body.timezone = params.timezone;
-    if (includeSlotMin) body.slot_min = params.slotMin;
+  for (let slugAttempt = 0; slugAttempt < 20; slugAttempt += 1) {
+    const currentSlug = slugAttempt === 0 ? baseSlug : `${baseSlug}-${slugAttempt + 1}`;
 
-    try {
-      if (existing?.[0]?.id) {
-        const row = existing[0];
-        if (row.owner_id && Number(row.owner_id) !== Number(params.ownerId)) {
-          throw new Error("El slug de barberia ya esta en uso.");
+    for (let schemaAttempt = 0; schemaAttempt < 3; schemaAttempt += 1) {
+      const existing = await requestPostgrest<BarberiaRow[]>(
+        `barberias?select=id,owner_id,slug&slug=eq.${encodeURIComponent(currentSlug)}&limit=1`,
+        { token: params.ownerToken },
+      );
+
+      const body: Record<string, unknown> = {
+        nombre: params.nombre,
+        slug: currentSlug,
+        owner_id: params.ownerId,
+      };
+      if (includeTimezone) body.timezone = params.timezone;
+      if (includeSlotMin) body.slot_min = params.slotMin;
+
+      try {
+        if (existing?.[0]?.id) {
+          const row = existing[0];
+          if (row.owner_id && Number(row.owner_id) !== Number(params.ownerId)) {
+            break;
+          }
+          const updated = await requestPostgrest<BarberiaRow[]>(
+            `barberias?id=eq.${row.id}`,
+            {
+              method: "PATCH",
+              token: params.ownerToken,
+              body,
+              preferRepresentation: true,
+            },
+          );
+          const out = updated?.[0];
+          if (!out?.id) throw new Error("No se pudo actualizar barberia.");
+          return out;
         }
-        const updated = await requestPostgrest<BarberiaRow[]>(
-          `barberias?id=eq.${row.id}`,
-          {
-            method: "PATCH",
-            token: params.ownerToken,
-            body,
-            preferRepresentation: true,
-          },
-        );
-        const out = updated?.[0];
-        if (!out?.id) throw new Error("No se pudo actualizar barberia.");
-        return out;
-      }
 
-      const created = await requestPostgrest<BarberiaRow[]>("barberias", {
-        method: "POST",
-        token: params.ownerToken,
-        body,
-        preferRepresentation: true,
-      });
-      const out = created?.[0];
-      if (!out?.id) throw new Error("No se pudo crear barberia.");
-      return out;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (includeTimezone && isMissingColumnError(message, "timezone")) {
-        includeTimezone = false;
-        continue;
+        const created = await requestPostgrest<BarberiaRow[]>("barberias", {
+          method: "POST",
+          token: params.ownerToken,
+          body,
+          preferRepresentation: true,
+        });
+        const out = created?.[0];
+        if (!out?.id) throw new Error("No se pudo crear barberia.");
+        return out;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "";
+        if (includeTimezone && isMissingColumnError(message, "timezone")) {
+          includeTimezone = false;
+          continue;
+        }
+        if (includeSlotMin && isMissingColumnError(message, "slot_min")) {
+          includeSlotMin = false;
+          continue;
+        }
+        if (isUniqueConstraintError(message, "barberias_slug_key")) {
+          break;
+        }
+        throw error;
       }
-      if (includeSlotMin && isMissingColumnError(message, "slot_min")) {
-        includeSlotMin = false;
-        continue;
-      }
-      throw error;
     }
   }
 
-  throw new Error("No se pudo crear/actualizar barberia con el esquema actual.");
+  throw new Error("No se pudo reservar un slug disponible para la barberia.");
 }
 
 function dayToNumber(dayName: string) {
@@ -491,7 +505,7 @@ export async function POST(request: Request) {
       },
       barberia: {
         id: barberiaId,
-        slug,
+        slug: barberia.slug,
       },
       created: {
         servicios: servicios.length,
