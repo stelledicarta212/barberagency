@@ -365,7 +365,7 @@ export async function POST(request: Request) {
     });
 
     const ownerToken = signPostgrestToken(Number(adminUser.id), {
-      role: "admin",
+      role: "authenticated",
       email: adminEmail,
     });
     const barberia = await ensureBarberia({
