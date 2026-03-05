@@ -86,7 +86,11 @@ function toBase64Url(input: Buffer | string) {
 
 function signPostgrestToken(
   userId: number,
-  options?: { role?: "authenticated" | "admin" | "barbero"; email?: string },
+  options?: {
+    role?: "authenticated";
+    appRole?: "admin" | "barbero";
+    email?: string;
+  },
 ) {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "HS256", typ: "JWT" };
@@ -94,6 +98,7 @@ function signPostgrestToken(
   const claims = {
     sub: String(Number(userId)),
     role,
+    app_role: clean(options?.appRole),
     user_id: Number(userId),
     email: clean(options?.email),
     iat: now,
@@ -438,6 +443,7 @@ export async function POST(request: Request) {
 
     const ownerToken = signPostgrestToken(Number(adminUser.id), {
       role: "authenticated",
+      appRole: "admin",
       email: adminEmail,
     });
     const barberia = await ensureBarberia({

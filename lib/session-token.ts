@@ -5,10 +5,21 @@ export type SessionRole = "admin" | "barbero";
 export type SessionClaims = {
   sub: string;
   user_id: number;
+  role: "authenticated";
+  app_role?: SessionRole;
+  email: string;
+  iat: number;
+  exp: number;
+};
+
+export type SessionContext = {
+  sub: string;
+  user_id: number;
   role: SessionRole;
   email: string;
   iat: number;
   exp: number;
+  db_role: string;
 };
 
 export const SESSION_COOKIE_NAME = "ba_pgrst_token";
@@ -47,7 +58,8 @@ export function signSessionToken(payload: {
   const claims: SessionClaims = {
     sub: String(payload.userId),
     user_id: Number(payload.userId),
-    role: payload.role,
+    role: "authenticated",
+    app_role: payload.role,
     email: payload.email,
     iat: now,
     exp: now + SESSION_TTL_SECONDS,
@@ -81,19 +93,34 @@ export function verifySessionToken(token: string | null | undefined) {
   if (!crypto.timingSafeEqual(a, b)) return null;
 
   try {
-    const claims = JSON.parse(fromBase64Url(encodedClaims)) as SessionClaims;
+    const claims = JSON.parse(fromBase64Url(encodedClaims)) as {
+      sub?: string | number;
+      user_id?: number;
+      role?: string;
+      app_role?: SessionRole;
+      email?: string;
+      iat?: number;
+      exp?: number;
+    };
     const now = Math.floor(Date.now() / 1000);
-    const role = claims.role === "barbero" ? "barbero" : "admin";
+    const roleClaim = (claims.app_role ?? claims.role ?? "").toString().trim().toLowerCase();
+    const role = roleClaim === "barbero" ? "barbero" : "admin";
 
-    if (!Number.isFinite(claims.user_id) || claims.user_id <= 0) return null;
-    if (!claims.exp || claims.exp <= now) return null;
+    const userId = Number(claims.user_id ?? 0);
+    const exp = Number(claims.exp ?? 0);
+    const iat = Number(claims.iat ?? 0);
+    if (!Number.isFinite(userId) || userId <= 0) return null;
+    if (!Number.isFinite(exp) || exp <= now) return null;
 
     return {
-      ...claims,
+      sub: (claims.sub ?? userId).toString(),
+      user_id: userId,
       role,
-      user_id: Number(claims.user_id),
+      db_role: (claims.role ?? "").toString(),
       email: (claims.email ?? "").toString(),
-    } satisfies SessionClaims;
+      iat,
+      exp,
+    } satisfies SessionContext;
   } catch {
     return null;
   }
