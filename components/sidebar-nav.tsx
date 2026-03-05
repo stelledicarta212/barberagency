@@ -7,6 +7,7 @@ import {
   CircleDollarSign,
   Clock3,
   LayoutDashboard,
+  LogOut,
   Package,
   Scissors,
   Sparkles,
@@ -16,7 +17,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 type NavItem = {
@@ -91,6 +92,8 @@ function NavLink({
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [mobileAccountOpen, setMobileAccountOpen] = useState(false);
   const [account, setAccount] = useState<AccountSummary | null>(() => {
     if (typeof window === "undefined") return null;
 
@@ -170,19 +173,110 @@ export function SidebarNav() {
       .catch(() => undefined);
   }, []);
 
+  async function handleMobileLogout() {
+    await fetch("/api/auth/session", { method: "DELETE" }).catch(() => undefined);
+    localStorage.removeItem("ba_user_role");
+    localStorage.removeItem("ba_user_id");
+    localStorage.removeItem("ba_user_email");
+    localStorage.removeItem("ba_user_nombre");
+    localStorage.removeItem("ba_user_apellido");
+    localStorage.removeItem("ba_user_nombre_manual");
+    localStorage.removeItem("ba_user_apellido_manual");
+    localStorage.removeItem("ba_plan_name");
+    localStorage.removeItem("ba_plan_status");
+    localStorage.removeItem("ba_plan_renovacion");
+    setMobileAccountOpen(false);
+    router.replace("/login");
+    router.refresh();
+  }
+
   return (
     <>
       <div className="panel sticky top-2 z-40 mx-3 mt-3 p-2 lg:hidden">
         <div className="mb-2 flex items-center justify-between rounded-lg bg-zinc-950 px-3 py-2 text-zinc-100">
           <span className="text-sm font-black tracking-wide">BARBERAGENCY</span>
-          <Users className="size-4 text-zinc-400" />
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMobileAccountOpen((prev) => !prev)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface-muted)] text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
+              aria-label="Cuenta"
+              title="Cuenta"
+            >
+              <Users className="size-4" />
+            </button>
+
+            {mobileAccountOpen ? (
+              <div className="absolute right-0 top-10 z-50 w-[min(19rem,calc(100vw-2.2rem))] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-2xl">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Cuenta y plan
+                </p>
+
+                {normalizedAccount ? (
+                  <>
+                    <p className="mt-1 truncate text-sm font-semibold text-zinc-100">
+                      {normalizedAccount.name}
+                    </p>
+                    <p className="truncate text-xs text-zinc-300">{normalizedAccount.email}</p>
+
+                    <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] p-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                        Plan actual
+                      </p>
+                      <div className="mt-1 flex items-center justify-between gap-2">
+                        <span className="truncate text-xs font-semibold text-zinc-100">
+                          {normalizedAccount.planName}
+                        </span>
+                        <span
+                          className={clsx(
+                            "rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide",
+                            isActiveStatus(normalizedAccount.planStatus)
+                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                              : "border-amber-500/40 bg-amber-500/10 text-amber-300",
+                          )}
+                        >
+                          {normalizedAccount.planStatus}
+                        </span>
+                      </div>
+                      {clean(normalizedAccount.planRenewal) ? (
+                        <p className="mt-1 text-[11px] text-zinc-400">
+                          Renovacion: {normalizedAccount.planRenewal}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleMobileLogout}
+                      className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-bold text-white transition hover:bg-[var(--accent-strong)]"
+                    >
+                      <LogOut className="size-4" />
+                      Cerrar sesion
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileAccountOpen(false)}
+                    className="mt-2 inline-flex w-full items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] px-3 py-2 text-xs font-semibold text-zinc-200"
+                  >
+                    Ir a login
+                  </Link>
+                )}
+              </div>
+            ) : null}
+          </div>
         </div>
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {navItems.map((item) => {
             const active =
               pathname === item.href || pathname.startsWith(`${item.href}/`);
 
-            return <NavLink key={item.href} {...item} active={active} />;
+            return (
+              <div key={item.href} onClick={() => setMobileAccountOpen(false)}>
+                <NavLink {...item} active={active} />
+              </div>
+            );
           })}
         </div>
       </div>
