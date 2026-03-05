@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LockKeyhole, Mail } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 type LoginState = {
@@ -27,7 +27,7 @@ function readOnboardingPrefill() {
   if (typeof window === "undefined") return { email: "", password: "" };
 
   const storageEmail = clean(localStorage.getItem("ba_login_prefill_email")).toLowerCase();
-  const storagePassword = clean(localStorage.getItem("ba_login_prefill_password"));
+  const storagePassword = (localStorage.getItem("ba_login_prefill_password") ?? "").toString();
   if (storageEmail || storagePassword) {
     return { email: storageEmail, password: storagePassword };
   }
@@ -38,7 +38,7 @@ function readOnboardingPrefill() {
     const draft = JSON.parse(raw) as OnboardingDraft;
     return {
       email: clean(draft?.accesos?.admin?.email).toLowerCase(),
-      password: clean(draft?.accesos?.admin?.password),
+      password: (draft?.accesos?.admin?.password ?? "").toString(),
     };
   } catch {
     return { email: "", password: "" };
@@ -50,6 +50,7 @@ export default function LoginPage() {
   const [fromOnboarding, setFromOnboarding] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [state, setState] = useState<LoginState>({ loading: false, message: "" });
 
   useEffect(() => {
@@ -183,7 +184,7 @@ export default function LoginPage() {
               <div className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-muted)] px-3">
                 <LockKeyhole className="size-4 text-zinc-400" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -192,6 +193,15 @@ export default function LoginPage() {
                   name="ba_login_password"
                   className="h-11 w-full bg-transparent text-sm text-zinc-100 outline-none"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+                  aria-label={showPassword ? "Ocultar password" : "Mostrar password"}
+                  title={showPassword ? "Ocultar password" : "Mostrar password"}
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
               </div>
             </label>
 

@@ -43,8 +43,18 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
+      const errorPayload = (await response.json().catch(() => ({}))) as {
+        message?: string;
+        details?: string;
+      };
+      const backendMessage =
+        (errorPayload.message ?? "").toString().trim() ||
+        (errorPayload.details ?? "").toString().trim();
       return NextResponse.json(
-        { ok: false, message: "No se pudo validar el acceso." },
+        {
+          ok: false,
+          message: backendMessage || "No se pudo validar el acceso.",
+        },
         { status: 401 },
       );
     }

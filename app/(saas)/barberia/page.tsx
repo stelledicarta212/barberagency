@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Plus, Save, Trash2 } from "lucide-react";
 
 type ServiceForm = {
   id: string;
@@ -138,6 +138,9 @@ export default function BarberiaDataPage() {
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminPasswordConfirm, setAdminPasswordConfirm] = useState("");
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [showAdminPasswordConfirm, setShowAdminPasswordConfirm] = useState(false);
+  const [showBarberPasswords, setShowBarberPasswords] = useState<Record<string, boolean>>({});
   const [hydrated, setHydrated] = useState(false);
 
   const [services, setServices] = useState<ServiceForm[]>([
@@ -297,6 +300,10 @@ export default function BarberiaDataPage() {
 
   function removeBarber(id: string) {
     setBarbers((prev) => (prev.length === 1 ? prev : prev.filter((b) => b.id !== id)));
+  }
+
+  function toggleBarberPassword(id: string) {
+    setShowBarberPasswords((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
   function buildDraft(): OnboardingDraft {
@@ -543,20 +550,56 @@ export default function BarberiaDataPage() {
             placeholder="Email admin"
             className="w-full rounded-lg border border-[var(--line)] bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-zinc-500"
           />
-          <input
-            type="password"
-            value={adminPassword}
-            onChange={(e) => setAdminPassword(e.target.value)}
-            placeholder="Password admin"
-            className="w-full rounded-lg border border-[var(--line)] bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-zinc-500"
-          />
-          <input
-            type="password"
-            value={adminPasswordConfirm}
-            onChange={(e) => setAdminPasswordConfirm(e.target.value)}
-            placeholder="Confirmar password"
-            className="w-full rounded-lg border border-[var(--line)] bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-zinc-500"
-          />
+          <div className="relative">
+            <input
+              type={showAdminPassword ? "text" : "password"}
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              placeholder="Password admin"
+              autoComplete="new-password"
+              className="w-full rounded-lg border border-[var(--line)] bg-zinc-950 px-3 py-2 pr-10 text-zinc-100 outline-none focus:border-zinc-500"
+            />
+            <button
+              type="button"
+              onClick={() => setShowAdminPassword((prev) => !prev)}
+              className="absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded-md p-1 text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+              aria-label={showAdminPassword ? "Ocultar password admin" : "Mostrar password admin"}
+              title={showAdminPassword ? "Ocultar password admin" : "Mostrar password admin"}
+            >
+              {showAdminPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
+          </div>
+          <div className="relative">
+            <input
+              type={showAdminPasswordConfirm ? "text" : "password"}
+              value={adminPasswordConfirm}
+              onChange={(e) => setAdminPasswordConfirm(e.target.value)}
+              placeholder="Confirmar password"
+              autoComplete="new-password"
+              className="w-full rounded-lg border border-[var(--line)] bg-zinc-950 px-3 py-2 pr-10 text-zinc-100 outline-none focus:border-zinc-500"
+            />
+            <button
+              type="button"
+              onClick={() => setShowAdminPasswordConfirm((prev) => !prev)}
+              className="absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded-md p-1 text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+              aria-label={
+                showAdminPasswordConfirm
+                  ? "Ocultar confirmacion de password"
+                  : "Mostrar confirmacion de password"
+              }
+              title={
+                showAdminPasswordConfirm
+                  ? "Ocultar confirmacion de password"
+                  : "Mostrar confirmacion de password"
+              }
+            >
+              {showAdminPasswordConfirm ? (
+                <EyeOff className="size-4" />
+              ) : (
+                <Eye className="size-4" />
+              )}
+            </button>
+          </div>
         </div>
       </article>
 
@@ -703,13 +746,37 @@ export default function BarberiaDataPage() {
                   placeholder="Email acceso"
                   className="rounded-lg border border-[var(--line)] bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-500"
                 />
-                <input
-                  type="password"
-                  value={barber.password}
-                  onChange={(e) => updateBarber(barber.id, "password", e.target.value)}
-                  placeholder="Password acceso"
-                  className="rounded-lg border border-[var(--line)] bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-500"
-                />
+                <div className="relative">
+                  <input
+                    type={showBarberPasswords[barber.id] ? "text" : "password"}
+                    value={barber.password}
+                    onChange={(e) => updateBarber(barber.id, "password", e.target.value)}
+                    placeholder="Password acceso"
+                    autoComplete="new-password"
+                    className="w-full rounded-lg border border-[var(--line)] bg-zinc-950 px-3 py-2 pr-10 text-sm text-zinc-100 outline-none focus:border-zinc-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => toggleBarberPassword(barber.id)}
+                    className="absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded-md p-1 text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+                    aria-label={
+                      showBarberPasswords[barber.id]
+                        ? "Ocultar password barbero"
+                        : "Mostrar password barbero"
+                    }
+                    title={
+                      showBarberPasswords[barber.id]
+                        ? "Ocultar password barbero"
+                        : "Mostrar password barbero"
+                    }
+                  >
+                    {showBarberPasswords[barber.id] ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-2 sm:w-fit sm:grid-cols-[auto_auto]">
                 <label className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-zinc-300">

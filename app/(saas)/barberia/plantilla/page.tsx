@@ -287,7 +287,7 @@ export default function BarberiaTemplatePage() {
     if (!ok) return;
 
     const adminEmail = safeString(draft?.accesos?.admin?.email).toLowerCase();
-    const adminPassword = safeString(draft?.accesos?.admin?.password);
+    const adminPassword = (draft?.accesos?.admin?.password ?? "").toString();
     if (adminEmail) localStorage.setItem("ba_login_prefill_email", adminEmail);
     if (adminPassword) localStorage.setItem("ba_login_prefill_password", adminPassword);
     localStorage.setItem("ba_login_prefill_source", "onboarding");
