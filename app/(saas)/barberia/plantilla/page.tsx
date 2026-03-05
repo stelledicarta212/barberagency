@@ -267,10 +267,6 @@ export default function BarberiaTemplatePage() {
 
     if (completeOnboarding) {
       localStorage.setItem("ba_onboarding_done", "true");
-      setSaveState({
-        type: "success",
-        message: "Listo. Tu onboarding quedo finalizado.",
-      });
       return true;
     }
 
@@ -286,11 +282,53 @@ export default function BarberiaTemplatePage() {
     const ok = saveBranding(true);
     if (!ok) return;
 
-    const adminEmail = safeString(draft?.accesos?.admin?.email).toLowerCase();
-    const adminPassword = (draft?.accesos?.admin?.password ?? "").toString();
+    const latestDraft = readDraft();
+    if (!latestDraft) {
+      setSaveState({
+        type: "error",
+        message: "No se encontro el borrador para finalizar onboarding.",
+      });
+      localStorage.removeItem("ba_onboarding_done");
+      return;
+    }
+
+    setSaveState({
+      type: "success",
+      message: "Creando barberia, administrador y barberos en BD...",
+    });
+
+    const response = await fetch("/api/onboarding/complete", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ draft: latestDraft }),
+    });
+
+    const result = (await response.json().catch(() => ({}))) as {
+      ok?: boolean;
+      message?: string;
+      admin?: { email?: string };
+    };
+
+    if (!response.ok || !result.ok) {
+      localStorage.removeItem("ba_onboarding_done");
+      setSaveState({
+        type: "error",
+        message: result.message || "No se pudo guardar onboarding en base de datos.",
+      });
+      return;
+    }
+
+    const adminEmail = safeString(result.admin?.email || latestDraft?.accesos?.admin?.email).toLowerCase();
+    const adminPassword = (latestDraft?.accesos?.admin?.password ?? "").toString();
     if (adminEmail) localStorage.setItem("ba_login_prefill_email", adminEmail);
     if (adminPassword) localStorage.setItem("ba_login_prefill_password", adminPassword);
     localStorage.setItem("ba_login_prefill_source", "onboarding");
+    setSaveState({
+      type: "success",
+      message: "Administrador y barberos creados con exito. Redirigiendo a login...",
+    });
 
     await fetch("/api/auth/session", { method: "DELETE" }).catch(() => undefined);
     localStorage.removeItem("ba_user_role");
