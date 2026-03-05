@@ -1,26 +1,205 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #070b12;
+  --foreground: #e8edf7;
+  --surface: #101723;
+  --surface-muted: #0c131f;
+  --line: #273348;
+  --accent: #f59e0b;
+  --accent-strong: #d97706;
+  --success: #22c55e;
+  --bg-spot-1: #1a2740;
+  --bg-spot-2: #2b1f0e;
+  --bg-grad-start: #070b12;
+  --bg-grad-mid: #0b1320;
+  --bg-grad-end: #070b12;
+}
+
+[data-theme="light"] {
+  --background: #f2f6fb;
+  --foreground: #0f172a;
+  --surface: #ffffff;
+  --surface-muted: #edf2f8;
+  --line: #c9d5e5;
+  --accent: #ca8a04;
+  --accent-strong: #a16207;
+  --success: #15803d;
+  --bg-spot-1: #c7d9fb;
+  --bg-spot-2: #f7ddb6;
+  --bg-grad-start: #f2f6fb;
+  --bg-grad-mid: #ebf1f9;
+  --bg-grad-end: #f8fbff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: "Sora", "Manrope", "Trebuchet MS", sans-serif;
+  --font-mono: "JetBrains Mono", "Consolas", monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-image:
+    radial-gradient(circle at 12% 20%, var(--bg-spot-1) 0%, transparent 34%),
+    radial-gradient(circle at 90% 2%, var(--bg-spot-2) 0%, transparent 28%),
+    linear-gradient(
+      180deg,
+      var(--bg-grad-start) 0%,
+      var(--bg-grad-mid) 45%,
+      var(--bg-grad-end) 100%
+    );
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.panel {
+  border: 1px solid color-mix(in srgb, var(--line) 88%, transparent);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border-radius: 1rem;
+  box-shadow:
+    0 1px 2px color-mix(in srgb, #000 42%, transparent),
+    0 14px 34px color-mix(in srgb, #000 30%, transparent);
+}
+
+.panel-muted {
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  background: color-mix(in srgb, var(--surface-muted) 94%, transparent);
+  border-radius: 1rem;
+}
+
+.title-gradient {
+  background-image: linear-gradient(120deg, #f8fafc 0%, #9bb9f6 52%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+[data-theme="light"] .title-gradient {
+  background-image: linear-gradient(120deg, #0f172a 0%, #1d4ed8 52%, #ca8a04 100%);
+}
+
+[data-theme="light"] .panel {
+  box-shadow:
+    0 1px 2px color-mix(in srgb, #cbd5e1 70%, transparent),
+    0 12px 26px color-mix(in srgb, #cbd5e1 55%, transparent);
+}
+
+[data-theme="light"] .text-zinc-100 {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .text-zinc-200 {
+  color: #1e293b !important;
+}
+
+[data-theme="light"] .text-zinc-300 {
+  color: #334155 !important;
+}
+
+[data-theme="light"] .text-zinc-400 {
+  color: #64748b !important;
+}
+
+[data-theme="light"] .text-zinc-500 {
+  color: #7c8ea5 !important;
+}
+
+[data-theme="light"] .bg-zinc-950 {
+  background-color: #eef3f9 !important;
+}
+
+[data-theme="light"] .bg-zinc-900 {
+  background-color: #e4ebf5 !important;
+}
+
+[data-theme="light"] .bg-zinc-800 {
+  background-color: #d8e2ef !important;
+}
+
+[data-theme="light"] .border-zinc-700,
+[data-theme="light"] .border-zinc-800 {
+  border-color: #c9d5e5 !important;
+}
+
+[data-theme="light"] .hover\:bg-zinc-800:hover,
+[data-theme="light"] .hover\:bg-zinc-900\/70:hover {
+  background-color: #e2eaf5 !important;
+}
+
+[data-theme="light"] .hover\:text-zinc-100:hover {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .hover\:border-zinc-500:hover,
+[data-theme="light"] .hover\:border-zinc-600:hover {
+  border-color: #9db2cc !important;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--accent-strong);
+}
+
+.btn-secondary {
+  border: 1px solid color-mix(in srgb, var(--accent) 80%, transparent);
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.btn-secondary:hover {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.btn-success {
+  background: #059669;
+  color: #fff;
+}
+
+.btn-success:hover {
+  background: #047857;
+}
+
+[data-theme="light"] .btn-success {
+  background: #16a34a;
+}
+
+[data-theme="light"] .btn-success:hover {
+  background: #15803d;
+}
+
+.animate-rise {
+  animation: rise 0.45s ease both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
