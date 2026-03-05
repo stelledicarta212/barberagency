@@ -33,6 +33,11 @@ type SaveState =
   | { type: "success"; message: string }
   | { type: "error"; message: string };
 
+type CreationState = {
+  adminCreated: boolean;
+  barberosCreated: number;
+};
+
 type OnboardingDraft = {
   barberia: {
     nombre: string;
@@ -166,6 +171,10 @@ export default function BarberiaDataPage() {
     })),
   );
   const [saveState, setSaveState] = useState<SaveState>({ type: "idle", message: "" });
+  const [creationState, setCreationState] = useState<CreationState>({
+    adminCreated: false,
+    barberosCreated: 0,
+  });
 
   if (!hydrated && typeof window !== "undefined") {
     const draft = readDraft();
@@ -371,6 +380,7 @@ export default function BarberiaDataPage() {
     );
 
     if (validateRequired && (!hasBusinessName || !hasServices || !hasBarbers || !hasActiveDay)) {
+      setCreationState({ adminCreated: false, barberosCreated: 0 });
       setSaveState({
         type: "error",
         message:
@@ -380,6 +390,7 @@ export default function BarberiaDataPage() {
     }
 
     if (validateRequired && !adminReady) {
+      setCreationState({ adminCreated: false, barberosCreated: 0 });
       setSaveState({
         type: "error",
         message: "Configura credenciales validas para el administrador (email y password).",
@@ -388,6 +399,7 @@ export default function BarberiaDataPage() {
     }
 
     if (validateRequired && activeBarbersWithName.length !== activeBarbersWithCredentials.length) {
+      setCreationState({ adminCreated: false, barberosCreated: 0 });
       setSaveState({
         type: "error",
         message:
@@ -398,6 +410,10 @@ export default function BarberiaDataPage() {
 
     localStorage.setItem("ba_onboarding_barberia", JSON.stringify(buildDraft()));
     localStorage.removeItem("ba_onboarding_done");
+    setCreationState({
+      adminCreated: true,
+      barberosCreated: activeBarbersWithCredentials.length,
+    });
     setSaveState({
       type: "success",
       message: "Datos guardados. Continua al paso de plantilla para finalizar.",
@@ -601,6 +617,11 @@ export default function BarberiaDataPage() {
             </button>
           </div>
         </div>
+        {creationState.adminCreated ? (
+          <p className="mt-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-300">
+            Administrador creado con exito.
+          </p>
+        ) : null}
       </article>
 
       <article className="panel animate-rise overflow-hidden">
@@ -657,6 +678,15 @@ export default function BarberiaDataPage() {
             </div>
           ))}
         </div>
+        {creationState.barberosCreated > 0 ? (
+          <div className="px-4 pb-4">
+            <p className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-300">
+              {creationState.barberosCreated === 1
+                ? "Barbero creado con exito."
+                : `Barberos creados con exito: ${creationState.barberosCreated}.`}
+            </p>
+          </div>
+        ) : null}
       </article>
 
       <article className="panel animate-rise overflow-hidden">
