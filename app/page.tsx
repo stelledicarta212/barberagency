@@ -112,7 +112,7 @@ export default function Home() {
 
           <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
             <ThemeToggle />
-            <Link href="/login" className="btn btn-primary">
+            <Link href="/barberia" className="btn btn-primary">
               Empezar ahora
               <ArrowRight className="size-4" />
             </Link>
@@ -146,7 +146,7 @@ export default function Home() {
               <MessageCircle className="size-4" />
               Agendar llamada
             </a>
-            <Link href="/login" className="btn btn-secondary">
+            <Link href="/barberia" className="btn btn-secondary">
               Crear mi barberia
               <ArrowRight className="size-4" />
             </Link>
@@ -273,7 +273,7 @@ export default function Home() {
                 Hablar por WhatsApp
                 <MessageCircle className="size-4" />
               </a>
-              <Link href="/login" className="btn btn-primary">
+              <Link href="/barberia" className="btn btn-primary">
                 Empezar configuracion
                 <ArrowRight className="size-4" />
               </Link>

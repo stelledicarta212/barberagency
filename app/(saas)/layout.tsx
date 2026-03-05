@@ -2,18 +2,22 @@ import { OnboardingGuard } from "@/components/onboarding-guard";
 import { LoginWelcomeCard } from "@/components/login-welcome-card";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { TopBar } from "@/components/top-bar";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session-token";
 
 export default async function SaaSLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const headerStore = await headers();
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
   const session = verifySessionToken(token);
+  const pathname = headerStore.get("x-pathname") ?? "";
+  const isPublicOnboardingRoute =
+    pathname === "/barberia" || pathname.startsWith("/barberia/");
 
-  if (!session) {
+  if (!session && !isPublicOnboardingRoute) {
     redirect("/login");
   }
 
