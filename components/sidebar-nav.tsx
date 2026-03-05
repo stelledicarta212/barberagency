@@ -19,11 +19,13 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { useSessionRole } from "@/components/session-role-gate";
 
 type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+  adminOnly?: boolean;
 };
 
 type AccountSummary = {
@@ -44,7 +46,7 @@ type OnboardingDraft = {
 };
 
 const navItems: NavItem[] = [
-  { href: "/barberia", label: "Mi barberia", icon: Building2 },
+  { href: "/barberia", label: "Mi barberia", icon: Building2, adminOnly: true },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/citas", label: "Citas", icon: Calendar },
   { href: "/barberos", label: "Barberos", icon: Scissors },
@@ -125,6 +127,8 @@ function NavLink({
 export function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const role = useSessionRole();
+  const visibleNavItems = navItems.filter((item) => !item.adminOnly || role === "admin");
   const isOnboardingRoute =
     pathname === "/barberia" || pathname.startsWith("/barberia/");
   const [mobileAccountOpen, setMobileAccountOpen] = useState(false);
@@ -318,7 +322,7 @@ export function SidebarNav() {
           </div>
         </div>
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const active =
               pathname === item.href || pathname.startsWith(`${item.href}/`);
 
@@ -342,7 +346,7 @@ export function SidebarNav() {
           </div>
 
           <nav className="mt-4 flex flex-1 flex-col gap-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const active =
                 pathname === item.href || pathname.startsWith(`${item.href}/`);
 

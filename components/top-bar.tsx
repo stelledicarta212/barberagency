@@ -16,18 +16,20 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useSessionRole } from "@/components/session-role-gate";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 type QuickRoute = {
   href: string;
   label: string;
   icon: LucideIcon;
+  adminOnly?: boolean;
 };
 
 const quickRoutes: QuickRoute[] = [
   { href: "/", label: "Inicio", icon: Home },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/barberia", label: "Mi barberia", icon: Building2 },
+  { href: "/barberia", label: "Mi barberia", icon: Building2, adminOnly: true },
   { href: "/citas", label: "Citas", icon: CalendarDays },
   { href: "/clientes", label: "Clientes", icon: UserSquare2 },
 ];
@@ -35,6 +37,8 @@ const quickRoutes: QuickRoute[] = [
 export function TopBar() {
   const pathname = usePathname();
   const router = useRouter();
+  const role = useSessionRole();
+  const visibleQuickRoutes = quickRoutes.filter((item) => !item.adminOnly || role === "admin");
   const today = new Date().toLocaleDateString("es-CO", {
     weekday: "long",
     day: "2-digit",
@@ -120,7 +124,7 @@ export function TopBar() {
         </div>
 
         <div className="mt-3 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {quickRoutes.map((item) => {
+          {visibleQuickRoutes.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
 

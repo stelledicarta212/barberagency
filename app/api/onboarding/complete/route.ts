@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
+import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session-token";
 
 type OnboardingDraft = {
   barberia?: {
@@ -403,6 +405,16 @@ function dayToNumber(dayName: string) {
 
 export async function POST(request: Request) {
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
+    const session = verifySessionToken(token);
+    if (session && session.role === "barbero") {
+      return NextResponse.json(
+        { ok: false, message: "Solo administrador puede modificar la configuracion de barberia." },
+        { status: 403 },
+      );
+    }
+
     const body = (await request.json().catch(() => ({}))) as {
       draft?: OnboardingDraft;
     };

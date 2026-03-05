@@ -26,13 +26,15 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
-          <Link
-            href="/barberia"
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-bold text-white transition hover:bg-[var(--accent-strong)]"
-          >
-            <Building2 className="size-4" />
-            Configurar mi barberia
-          </Link>
+          <AdminOnly>
+            <Link
+              href="/barberia"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-bold text-white transition hover:bg-[var(--accent-strong)]"
+            >
+              <Building2 className="size-4" />
+              Configurar mi barberia
+            </Link>
+          </AdminOnly>
           <AdminOnly
             fallback={
               <span className="inline-flex items-center rounded-xl border border-[var(--line)] bg-[var(--surface-muted)] px-3 py-2 text-xs font-semibold text-zinc-400">
@@ -61,13 +63,21 @@ export default async function DashboardPage() {
               Completa la informacion de tu negocio para activar agenda, servicios y equipo.
             </p>
           </div>
-          <Link
-            href="/barberia"
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2 text-xs font-black uppercase tracking-wide text-white transition hover:bg-[var(--accent-strong)]"
+          <AdminOnly
+            fallback={
+              <span className="inline-flex items-center rounded-xl border border-[var(--line)] bg-[var(--surface-muted)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                Solo administrador puede configurar barberia
+              </span>
+            }
           >
-            Ir a mi barberia
-            <ArrowRight className="size-4" />
-          </Link>
+            <Link
+              href="/barberia"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2 text-xs font-black uppercase tracking-wide text-white transition hover:bg-[var(--accent-strong)]"
+            >
+              Ir a mi barberia
+              <ArrowRight className="size-4" />
+            </Link>
+          </AdminOnly>
         </div>
       </article>
 
