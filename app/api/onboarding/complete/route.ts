@@ -136,6 +136,15 @@ function isUniqueConstraintError(message: string, constraintName: string) {
   return msg.includes("duplicate key value violates unique constraint") && msg.includes(constraint);
 }
 
+function isRlsErrorForTable(message: string, table: string) {
+  const msg = clean(message).toLowerCase();
+  const tbl = table.toLowerCase();
+  return (
+    msg.includes("violates row-level security policy") &&
+    (msg.includes(`\"${tbl}\"`) || msg.includes(`'${tbl}'`) || msg.includes(` ${tbl}`))
+  );
+}
+
 async function requestPostgrest<T>(
   path: string,
   options: {
@@ -324,6 +333,55 @@ async function ensureBarberia(params: {
   throw new Error("No se pudo reservar un slug disponible para la barberia.");
 }
 
+async function insertServiciosWithFallback(params: {
+  token: string;
+  barberiaId: number;
+  ownerId: number;
+  servicios: Array<{
+    nombre: string;
+    duracion_min: number;
+    precio: number;
+  }>;
+}) {
+  if (params.servicios.length === 0) return;
+
+  let includeOwnerId = true;
+  let lastError = "";
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const payload = params.servicios.map((servicio) => ({
+      barberia_id: params.barberiaId,
+      ...servicio,
+      ...(includeOwnerId ? { owner_id: params.ownerId } : {}),
+    }));
+
+    try {
+      await requestPostgrest<unknown[]>("servicios", {
+        method: "POST",
+        token: params.token,
+        body: payload,
+        preferRepresentation: false,
+      });
+      return;
+    } catch (error) {
+      const message = error instanceof Error ? clean(error.message) : "";
+      lastError = message;
+      if (includeOwnerId && isMissingColumnError(message, "owner_id")) {
+        includeOwnerId = false;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  if (isRlsErrorForTable(lastError, "servicios")) {
+    throw new Error(
+      "RLS en servicios bloqueo la insercion. Verifica que la politica WITH CHECK acepte owner_id o barberia_id del administrador.",
+    );
+  }
+  throw new Error(lastError || "No se pudo crear servicios.");
+}
+
 function dayToNumber(dayName: string) {
   const key = clean(dayName).toLowerCase();
   const map: Record<string, number> = {
@@ -402,7 +460,6 @@ export async function POST(request: Request) {
       ? draft!.servicios
           .filter((s) => clean(s.nombre))
           .map((s) => ({
-            barberia_id: barberiaId,
             nombre: clean(s.nombre),
             duracion_min: Math.max(5, Number(s.duracion_min ?? 0)),
             precio: Math.max(0, Number(s.precio ?? 0)),
@@ -410,11 +467,11 @@ export async function POST(request: Request) {
       : [];
 
     if (servicios.length > 0) {
-      await requestPostgrest<unknown[]>("servicios", {
-        method: "POST",
+      await insertServiciosWithFallback({
         token: ownerToken,
-        body: servicios,
-        preferRepresentation: false,
+        barberiaId,
+        ownerId: Number(adminUser.id),
+        servicios,
       });
     }
 
