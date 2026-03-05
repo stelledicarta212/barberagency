@@ -17,11 +17,20 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+};
+
+type AccountSummary = {
+  name: string;
+  email: string;
+  planName: string;
+  planStatus: string;
+  planRenewal?: string;
 };
 
 const navItems: NavItem[] = [
@@ -36,6 +45,27 @@ const navItems: NavItem[] = [
   { href: "/productos", label: "Productos", icon: Package },
   { href: "/gastos", label: "Gastos", icon: CircleDollarSign },
 ];
+
+function clean(value: string | null | undefined) {
+  return (value ?? "").toString().trim();
+}
+
+function getNameFromEmail(email: string) {
+  const safe = clean(email);
+  if (!safe.includes("@")) return safe || "Usuario";
+  return safe.split("@")[0];
+}
+
+function isActiveStatus(status: string) {
+  const text = clean(status).toLowerCase();
+  return (
+    text === "activo" ||
+    text === "active" ||
+    text === "vigente" ||
+    text === "paid" ||
+    text === "pagado"
+  );
+}
 
 function NavLink({
   href,
@@ -61,6 +91,84 @@ function NavLink({
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const [account, setAccount] = useState<AccountSummary | null>(() => {
+    if (typeof window === "undefined") return null;
+
+    const localName = [
+      clean(localStorage.getItem("ba_user_nombre_manual")),
+      clean(localStorage.getItem("ba_user_apellido_manual")),
+      clean(localStorage.getItem("ba_user_nombre")),
+      clean(localStorage.getItem("ba_user_apellido")),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    const localEmail = clean(localStorage.getItem("ba_user_email"));
+    const localPlanName = clean(localStorage.getItem("ba_plan_name")) || "Sin plan";
+    const localPlanStatus =
+      clean(localStorage.getItem("ba_plan_status")) ||
+      (localPlanName === "Sin plan" ? "Pendiente" : "Activo");
+    const localPlanRenewal = clean(localStorage.getItem("ba_plan_renovacion"));
+
+    if (!localName && !localEmail) return null;
+
+    return {
+      name: localName,
+      email: localEmail,
+      planName: localPlanName,
+      planStatus: localPlanStatus,
+      planRenewal: localPlanRenewal,
+    };
+  });
+
+  const normalizedAccount = useMemo(() => {
+    if (!account) return null;
+
+    const email = clean(account.email);
+    const name = clean(account.name) || getNameFromEmail(email);
+    const planName = clean(account.planName) || "Sin plan";
+    const planStatus =
+      clean(account.planStatus) || (planName === "Sin plan" ? "Pendiente" : "Activo");
+    const planRenewal = clean(account.planRenewal);
+
+    return { name, email, planName, planStatus, planRenewal };
+  }, [account]);
+
+  useEffect(() => {
+    fetch("/api/auth/profile", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json().catch(() => null)) as
+          | {
+              ok?: boolean;
+              name?: string;
+              email?: string;
+              plan_name?: string;
+              plan_status?: string;
+              plan_renewal?: string;
+            }
+          | null;
+      })
+      .then((data) => {
+        if (!data?.ok) return;
+
+        const name = clean(data.name);
+        const email = clean(data.email);
+        const planName = clean(data.plan_name) || "Sin plan";
+        const planStatus =
+          clean(data.plan_status) || (planName === "Sin plan" ? "Pendiente" : "Activo");
+        const planRenewal = clean(data.plan_renewal);
+
+        if (name) localStorage.setItem("ba_user_nombre", name);
+        if (email) localStorage.setItem("ba_user_email", email);
+        localStorage.setItem("ba_plan_name", planName);
+        localStorage.setItem("ba_plan_status", planStatus);
+        if (planRenewal) localStorage.setItem("ba_plan_renovacion", planRenewal);
+
+        setAccount({ name, email, planName, planStatus, planRenewal });
+      })
+      .catch(() => undefined);
+  }, []);
 
   return (
     <>
@@ -100,11 +208,46 @@ export function SidebarNav() {
 
           <div className="panel-muted mt-4 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-              Primer paso
+              Cuenta y plan
             </p>
-            <p className="mt-1 text-sm font-semibold text-zinc-200">
-              Configura tu barberia en el modulo inicial
-            </p>
+            {normalizedAccount ? (
+              <>
+                <p className="mt-1 truncate text-sm font-semibold text-zinc-100">
+                  {normalizedAccount.name}
+                </p>
+                <p className="truncate text-xs text-zinc-300">{normalizedAccount.email}</p>
+
+                <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] p-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                    Plan actual
+                  </p>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span className="truncate text-xs font-semibold text-zinc-100">
+                      {normalizedAccount.planName}
+                    </span>
+                    <span
+                      className={clsx(
+                        "rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide",
+                        isActiveStatus(normalizedAccount.planStatus)
+                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                          : "border-amber-500/40 bg-amber-500/10 text-amber-300",
+                      )}
+                    >
+                      {normalizedAccount.planStatus}
+                    </span>
+                  </div>
+                  {clean(normalizedAccount.planRenewal) ? (
+                    <p className="mt-1 text-[11px] text-zinc-400">
+                      Renovacion: {normalizedAccount.planRenewal}
+                    </p>
+                  ) : null}
+                </div>
+              </>
+            ) : (
+              <p className="mt-1 text-sm font-semibold text-zinc-200">
+                Configura tu barberia en el modulo inicial
+              </p>
+            )}
           </div>
         </div>
       </aside>

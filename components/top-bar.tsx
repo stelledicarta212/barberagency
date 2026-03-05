@@ -47,6 +47,13 @@ export function TopBar() {
     localStorage.removeItem("ba_user_role");
     localStorage.removeItem("ba_user_id");
     localStorage.removeItem("ba_user_email");
+    localStorage.removeItem("ba_user_nombre");
+    localStorage.removeItem("ba_user_apellido");
+    localStorage.removeItem("ba_user_nombre_manual");
+    localStorage.removeItem("ba_user_apellido_manual");
+    localStorage.removeItem("ba_plan_name");
+    localStorage.removeItem("ba_plan_status");
+    localStorage.removeItem("ba_plan_renovacion");
     router.replace("/login");
     router.refresh();
   }

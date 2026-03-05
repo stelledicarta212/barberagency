@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Plus, Save, Trash2 } from "lucide-react";
 
@@ -120,7 +120,11 @@ function readDraft(): OnboardingDraft | null {
 
 export default function BarberiaDataPage() {
   const router = useRouter();
-  const [showOnboardingNotice, setShowOnboardingNotice] = useState(false);
+  const [showOnboardingNotice] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const params = new URLSearchParams(window.location.search);
+    return params.get("onboarding") === "1";
+  });
   const [nombre, setNombre] = useState("");
   const [slug, setSlug] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -159,12 +163,6 @@ export default function BarberiaDataPage() {
     })),
   );
   const [saveState, setSaveState] = useState<SaveState>({ type: "idle", message: "" });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    setShowOnboardingNotice(params.get("onboarding") === "1");
-  }, []);
 
   if (!hydrated && typeof window !== "undefined") {
     const draft = readDraft();
