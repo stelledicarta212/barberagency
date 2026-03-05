@@ -114,6 +114,16 @@ function postgrestErrorMessage(payload: unknown) {
   return clean(value.message) || clean(value.details) || clean(value.hint);
 }
 
+function isMissingColumnError(message: string, column: string) {
+  const msg = clean(message).toLowerCase();
+  const col = column.toLowerCase();
+  return (
+    msg.includes(`could not find the '${col}' column`) ||
+    (msg.includes("column") && msg.includes(col) && msg.includes("does not exist")) ||
+    (msg.includes("schema cache") && msg.includes(col))
+  );
+}
+
 async function requestPostgrest<T>(
   path: string,
   options: {
@@ -236,42 +246,62 @@ async function ensureBarberia(params: {
     { token: params.ownerToken },
   );
 
-  const body = {
-    nombre: params.nombre,
-    slug: params.slug,
-    owner_id: params.ownerId,
-    timezone: params.timezone,
-    slot_min: params.slotMin,
-  };
+  let includeTimezone = true;
+  let includeSlotMin = true;
 
-  if (existing?.[0]?.id) {
-    const row = existing[0];
-    if (row.owner_id && Number(row.owner_id) !== Number(params.ownerId)) {
-      throw new Error("El slug de barberia ya esta en uso.");
-    }
-    const updated = await requestPostgrest<BarberiaRow[]>(
-      `barberias?id=eq.${row.id}`,
-      {
-        method: "PATCH",
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const body: Record<string, unknown> = {
+      nombre: params.nombre,
+      slug: params.slug,
+      owner_id: params.ownerId,
+    };
+    if (includeTimezone) body.timezone = params.timezone;
+    if (includeSlotMin) body.slot_min = params.slotMin;
+
+    try {
+      if (existing?.[0]?.id) {
+        const row = existing[0];
+        if (row.owner_id && Number(row.owner_id) !== Number(params.ownerId)) {
+          throw new Error("El slug de barberia ya esta en uso.");
+        }
+        const updated = await requestPostgrest<BarberiaRow[]>(
+          `barberias?id=eq.${row.id}`,
+          {
+            method: "PATCH",
+            token: params.ownerToken,
+            body,
+            preferRepresentation: true,
+          },
+        );
+        const out = updated?.[0];
+        if (!out?.id) throw new Error("No se pudo actualizar barberia.");
+        return out;
+      }
+
+      const created = await requestPostgrest<BarberiaRow[]>("barberias", {
+        method: "POST",
         token: params.ownerToken,
         body,
         preferRepresentation: true,
-      },
-    );
-    const out = updated?.[0];
-    if (!out?.id) throw new Error("No se pudo actualizar barberia.");
-    return out;
+      });
+      const out = created?.[0];
+      if (!out?.id) throw new Error("No se pudo crear barberia.");
+      return out;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (includeTimezone && isMissingColumnError(message, "timezone")) {
+        includeTimezone = false;
+        continue;
+      }
+      if (includeSlotMin && isMissingColumnError(message, "slot_min")) {
+        includeSlotMin = false;
+        continue;
+      }
+      throw error;
+    }
   }
 
-  const created = await requestPostgrest<BarberiaRow[]>("barberias", {
-    method: "POST",
-    token: params.ownerToken,
-    body,
-    preferRepresentation: true,
-  });
-  const out = created?.[0];
-  if (!out?.id) throw new Error("No se pudo crear barberia.");
-  return out;
+  throw new Error("No se pudo crear/actualizar barberia con el esquema actual.");
 }
 
 function dayToNumber(dayName: string) {
