@@ -286,6 +286,12 @@ export default function BarberiaTemplatePage() {
     const ok = saveBranding(true);
     if (!ok) return;
 
+    const adminEmail = safeString(draft?.accesos?.admin?.email).toLowerCase();
+    const adminPassword = safeString(draft?.accesos?.admin?.password);
+    if (adminEmail) localStorage.setItem("ba_login_prefill_email", adminEmail);
+    if (adminPassword) localStorage.setItem("ba_login_prefill_password", adminPassword);
+    localStorage.setItem("ba_login_prefill_source", "onboarding");
+
     await fetch("/api/auth/session", { method: "DELETE" }).catch(() => undefined);
     localStorage.removeItem("ba_user_role");
     localStorage.removeItem("ba_user_id");

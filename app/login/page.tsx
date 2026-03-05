@@ -10,6 +10,41 @@ type LoginState = {
   message: string;
 };
 
+type OnboardingDraft = {
+  accesos?: {
+    admin?: {
+      email?: string;
+      password?: string;
+    };
+  };
+};
+
+function clean(value: string | null | undefined) {
+  return (value ?? "").toString().trim();
+}
+
+function readOnboardingPrefill() {
+  if (typeof window === "undefined") return { email: "", password: "" };
+
+  const storageEmail = clean(localStorage.getItem("ba_login_prefill_email")).toLowerCase();
+  const storagePassword = clean(localStorage.getItem("ba_login_prefill_password"));
+  if (storageEmail || storagePassword) {
+    return { email: storageEmail, password: storagePassword };
+  }
+
+  try {
+    const raw = localStorage.getItem("ba_onboarding_barberia");
+    if (!raw) return { email: "", password: "" };
+    const draft = JSON.parse(raw) as OnboardingDraft;
+    return {
+      email: clean(draft?.accesos?.admin?.email).toLowerCase(),
+      password: clean(draft?.accesos?.admin?.password),
+    };
+  } catch {
+    return { email: "", password: "" };
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [fromOnboarding, setFromOnboarding] = useState(false);
@@ -21,7 +56,23 @@ export default function LoginPage() {
     let alive = true;
     if (typeof window !== "undefined") {
       const q = new URLSearchParams(window.location.search);
-      setFromOnboarding(q.get("onboarding") === "1");
+      const onboardingFlow = q.get("onboarding") === "1";
+      setFromOnboarding(onboardingFlow);
+
+      if (onboardingFlow) {
+        const prefill = readOnboardingPrefill();
+        if (prefill.email) setEmail(prefill.email);
+        if (prefill.password) setPassword(prefill.password);
+
+        // On some mobile browsers/password managers, autofill can override initial values.
+        // Force the onboarding credentials once after mount.
+        window.setTimeout(() => {
+          if (!alive) return;
+          const latest = readOnboardingPrefill();
+          if (latest.email) setEmail(latest.email);
+          if (latest.password) setPassword(latest.password);
+        }, 120);
+      }
     }
 
     fetch("/api/auth/session", { cache: "no-store" })
@@ -65,6 +116,9 @@ export default function LoginPage() {
       localStorage.setItem("ba_user_id", String(data.user_id ?? ""));
       localStorage.setItem("ba_user_email", data.email ?? "");
       localStorage.setItem("ba_show_login_welcome", "1");
+      localStorage.removeItem("ba_login_prefill_email");
+      localStorage.removeItem("ba_login_prefill_password");
+      localStorage.removeItem("ba_login_prefill_source");
 
       setState({ loading: false, message: "" });
       router.replace("/dashboard");
@@ -115,6 +169,8 @@ export default function LoginPage() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="usuario@correo.com"
+                  autoComplete="username"
+                  name="ba_login_email"
                   className="h-11 w-full bg-transparent text-sm text-zinc-100 outline-none"
                 />
               </div>
@@ -132,6 +188,8 @@ export default function LoginPage() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Tu password"
+                  autoComplete="current-password"
+                  name="ba_login_password"
                   className="h-11 w-full bg-transparent text-sm text-zinc-100 outline-none"
                 />
               </div>
