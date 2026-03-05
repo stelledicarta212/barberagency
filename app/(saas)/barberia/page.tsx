@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Plus, Save, Trash2 } from "lucide-react";
 
 type ServiceForm = {
@@ -120,8 +120,7 @@ function readDraft(): OnboardingDraft | null {
 
 export default function BarberiaDataPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const showOnboardingNotice = searchParams.get("onboarding") === "1";
+  const [showOnboardingNotice, setShowOnboardingNotice] = useState(false);
   const [nombre, setNombre] = useState("");
   const [slug, setSlug] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -160,6 +159,12 @@ export default function BarberiaDataPage() {
     })),
   );
   const [saveState, setSaveState] = useState<SaveState>({ type: "idle", message: "" });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    setShowOnboardingNotice(params.get("onboarding") === "1");
+  }, []);
 
   if (!hydrated && typeof window !== "undefined") {
     const draft = readDraft();
