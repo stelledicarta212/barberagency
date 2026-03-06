@@ -14,6 +14,25 @@ export default async function DashboardPage() {
 
   return (
     <section className="space-y-5">
+      <article
+        className="animate-rise relative overflow-hidden rounded-2xl border border-[var(--line)]"
+        style={{ animationDelay: "20ms" }}
+      >
+        <div className="absolute inset-0 bg-[url('/Fondoiniciodshb.jpg')] bg-cover bg-center" />
+        <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(2,8,23,0.95),rgba(2,8,23,0.7)_45%,rgba(2,8,23,0.85))]" />
+        <div className="relative z-10 flex min-h-[220px] flex-col justify-end p-5 sm:p-7">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-300/90">
+            Barberagency
+          </p>
+          <h2 className="mt-1 max-w-2xl text-2xl font-black leading-tight text-white sm:text-3xl">
+            Centro de control de tu barberia
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm text-zinc-200/90">
+            Revisa agenda, ingresos y operacion diaria desde un solo panel.
+          </p>
+        </div>
+      </article>
+
       <div className="animate-rise flex items-start justify-between gap-3">
         <div>
           <h1 className="title-gradient text-2xl font-black tracking-tight sm:text-3xl">
