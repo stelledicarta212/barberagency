@@ -34,6 +34,10 @@ function normalizeMetodo(value: unknown): PagoMetodo | "" {
 function normalizeDateTime(value: unknown) {
   const input = normalizeText(value);
   if (!input) return "";
+  const dateOnly = input.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnly) {
+    return `${dateOnly[1]}-${dateOnly[2]}-${dateOnly[3]}T00:00:00`;
+  }
   const match = input.match(
     /^(\d{4})-(\d{2})-(\d{2})[ tT](\d{2}):(\d{2})(?::(\d{2}))?$/,
   );
@@ -150,4 +154,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message }, { status: 400 });
   }
 }
-

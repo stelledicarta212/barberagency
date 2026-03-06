@@ -42,22 +42,30 @@ function formatMoneyCOP(value: number) {
   }).format(Number.isFinite(value) ? value : 0);
 }
 
-function toInputDateTime(value: string | null) {
+function toInputDate(value: string | null) {
   if (!value) return "";
-  const match = value.match(
+  const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnly) return `${dateOnly[1]}-${dateOnly[2]}-${dateOnly[3]}`;
+
+  const dateTime = value.match(
     /^(\d{4})-(\d{2})-(\d{2})[ tT](\d{2}):(\d{2})(?::\d{2})?/,
   );
-  if (!match) return "";
-  return `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`;
+  if (!dateTime) return "";
+  return `${dateTime[1]}-${dateTime[2]}-${dateTime[3]}`;
 }
 
 function toUiDateTime(value: string | null) {
   if (!value) return "-";
+  const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnly) return `${dateOnly[1]}-${dateOnly[2]}-${dateOnly[3]}`;
+
   const match = value.match(
     /^(\d{4})-(\d{2})-(\d{2})[ tT](\d{2}):(\d{2})(?::\d{2})?/,
   );
   if (!match) return value;
-  return `${match[1]}-${match[2]}-${match[3]} ${match[4]}:${match[5]}`;
+  const date = `${match[1]}-${match[2]}-${match[3]}`;
+  const time = `${match[4]}:${match[5]}`;
+  return time === "00:00" ? date : `${date} ${time}`;
 }
 
 function normalizeMethod(value: unknown): PagoMetodo {
@@ -118,7 +126,7 @@ export function PagosCrud() {
       cita_id: row.cita_id,
       total: row.total,
       metodo: normalizeMethod(row.metodo),
-      pagado_en: toInputDateTime(row.pagado_en),
+      pagado_en: toInputDate(row.pagado_en),
     });
     setMessage("");
     setError(false);
@@ -440,9 +448,9 @@ export function PagosCrud() {
                 </label>
 
                 <label className="space-y-1 text-sm">
-                  <span className="text-zinc-300">Pagado en (opcional)</span>
+                  <span className="text-zinc-300">Fecha de pago (opcional)</span>
                   <input
-                    type="datetime-local"
+                    type="date"
                     value={form.pagado_en}
                     onChange={(event) =>
                       setForm((prev) => ({ ...prev, pagado_en: event.target.value }))
@@ -476,4 +484,3 @@ export function PagosCrud() {
     </section>
   );
 }
-
