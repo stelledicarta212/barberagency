@@ -421,6 +421,65 @@ export default function BarberiaDataPage() {
     return true;
   }
 
+  function createAdminAccess() {
+    if (!adminReady) {
+      setCreationState((prev) => ({ ...prev, adminCreated: false }));
+      setSaveState({
+        type: "error",
+        message: "Completa nombre, email valido y password del administrador para crearlo.",
+      });
+      return;
+    }
+
+    localStorage.setItem("ba_onboarding_barberia", JSON.stringify(buildDraft()));
+    localStorage.removeItem("ba_onboarding_done");
+    setCreationState((prev) => ({ ...prev, adminCreated: true }));
+    setSaveState({
+      type: "success",
+      message: "Administrador creado con exito.",
+    });
+  }
+
+  function createBarberosAccess() {
+    const activeBarbersWithName = barbers.filter((b) => b.activo && b.nombre.trim().length > 0);
+    const activeBarbersWithCredentials = activeBarbersWithName.filter(
+      (barber) => isValidEmail(barber.email) && barber.password.length >= 6,
+    );
+
+    if (activeBarbersWithCredentials.length === 0) {
+      setCreationState((prev) => ({ ...prev, barberosCreated: 0 }));
+      setSaveState({
+        type: "error",
+        message: "Agrega al menos 1 barbero activo con email valido y password para crearlo.",
+      });
+      return;
+    }
+
+    if (activeBarbersWithName.length !== activeBarbersWithCredentials.length) {
+      setCreationState((prev) => ({ ...prev, barberosCreated: 0 }));
+      setSaveState({
+        type: "error",
+        message:
+          "Todos los barberos activos deben tener email valido y password de minimo 6 caracteres.",
+      });
+      return;
+    }
+
+    localStorage.setItem("ba_onboarding_barberia", JSON.stringify(buildDraft()));
+    localStorage.removeItem("ba_onboarding_done");
+    setCreationState((prev) => ({
+      ...prev,
+      barberosCreated: activeBarbersWithCredentials.length,
+    }));
+    setSaveState({
+      type: "success",
+      message:
+        activeBarbersWithCredentials.length === 1
+          ? "Barbero creado con exito."
+          : `Barberos creados con exito: ${activeBarbersWithCredentials.length}.`,
+    });
+  }
+
   function goToTemplate() {
     const ok = saveDraft(true);
     if (ok) router.push("/barberia/plantilla");
@@ -617,6 +676,15 @@ export default function BarberiaDataPage() {
             </button>
           </div>
         </div>
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={createAdminAccess}
+            className="inline-flex items-center justify-center rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-bold text-white transition hover:bg-[var(--accent-strong)]"
+          >
+            Crear administrador
+          </button>
+        </div>
         {creationState.adminCreated ? (
           <p className="mt-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-300">
             Administrador creado con exito.
@@ -728,6 +796,15 @@ export default function BarberiaDataPage() {
               </div>
             </div>
           ))}
+        </div>
+        <div className="px-4 pb-2">
+          <button
+            type="button"
+            onClick={createBarberosAccess}
+            className="inline-flex items-center justify-center rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-bold text-white transition hover:bg-[var(--accent-strong)]"
+          >
+            Crear barbero(s)
+          </button>
         </div>
       </article>
 
