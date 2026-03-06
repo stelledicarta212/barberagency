@@ -57,6 +57,12 @@ type BarberiaRow = {
   slug: string;
 };
 
+type BarberoRow = {
+  id: number;
+  barberia_id: number | null;
+  usuario_id: number | null;
+};
+
 const ONE_HOUR = 60 * 60;
 
 function clean(value: unknown) {
@@ -389,6 +395,70 @@ async function insertServiciosWithFallback(params: {
   throw new Error(lastError || "No se pudo crear servicios.");
 }
 
+async function upsertBarberosByUsuario(params: {
+  token: string;
+  barberiaId: number;
+  barberos: Array<{
+    barberia_id: number;
+    nombre: string;
+    activo: boolean;
+    usuario_id?: number;
+  }>;
+}) {
+  if (params.barberos.length === 0) return 0;
+
+  let processed = 0;
+
+  for (const barbero of params.barberos) {
+    const userId = Number(barbero.usuario_id ?? 0);
+    try {
+      if (userId > 0) {
+        const existing = await requestPostgrest<BarberoRow[]>(
+          `barberos?select=id,barberia_id,usuario_id&usuario_id=eq.${userId}&limit=1`,
+          { token: params.token },
+        );
+
+        if (existing?.[0]?.id) {
+          await requestPostgrest<unknown[]>(
+            `barberos?id=eq.${existing[0].id}`,
+            {
+              method: "PATCH",
+              token: params.token,
+              body: {
+                barberia_id: params.barberiaId,
+                nombre: barbero.nombre,
+                activo: barbero.activo,
+                usuario_id: userId,
+              },
+              preferRepresentation: false,
+            },
+          );
+          processed += 1;
+          continue;
+        }
+      }
+
+      await requestPostgrest<unknown[]>("barberos", {
+        method: "POST",
+        token: params.token,
+        body: barbero,
+        preferRepresentation: false,
+      });
+      processed += 1;
+    } catch (error) {
+      const message = error instanceof Error ? clean(error.message) : "";
+      if (isUniqueConstraintError(message, "ux_barberos_usuario_id_notnull")) {
+        throw new Error(
+          "Uno de los barberos ya esta vinculado a otra barberia. Usa otro email o libera ese usuario primero.",
+        );
+      }
+      throw error;
+    }
+  }
+
+  return processed;
+}
+
 function dayToNumber(dayName: string) {
   const key = clean(dayName).toLowerCase();
   const map: Record<string, number> = {
@@ -562,14 +632,14 @@ export async function POST(request: Request) {
       });
     }
 
-    if (barberosForInsert.length > 0) {
-      await requestPostgrest<unknown[]>("barberos", {
-        method: "POST",
-        token: ownerToken,
-        body: barberosForInsert,
-        preferRepresentation: false,
-      });
-    }
+    const barberosCreated =
+      barberosForInsert.length > 0
+        ? await upsertBarberosByUsuario({
+            token: ownerToken,
+            barberiaId,
+            barberos: barberosForInsert,
+          })
+        : 0;
 
     return NextResponse.json({
       ok: true,
@@ -585,7 +655,7 @@ export async function POST(request: Request) {
       created: {
         servicios: servicios.length,
         horarios: horarios.length,
-        barberos: barberosForInsert.length,
+        barberos: barberosCreated,
       },
     });
   } catch (error) {
