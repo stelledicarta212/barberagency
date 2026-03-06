@@ -746,15 +746,6 @@ export default function BarberiaDataPage() {
             </div>
           ))}
         </div>
-        {creationState.barberosCreated > 0 ? (
-          <div className="px-4 pb-4">
-            <p className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-300">
-              {creationState.barberosCreated === 1
-                ? "Barbero creado con exito."
-                : `Barberos creados con exito: ${creationState.barberosCreated}.`}
-            </p>
-          </div>
-        ) : null}
       </article>
 
       <article className="panel animate-rise overflow-hidden">
@@ -796,15 +787,6 @@ export default function BarberiaDataPage() {
               </div>
             </div>
           ))}
-        </div>
-        <div className="px-4 pb-2">
-          <button
-            type="button"
-            onClick={createBarberosAccess}
-            className="inline-flex items-center justify-center rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-bold text-white transition hover:bg-[var(--accent-strong)]"
-          >
-            Crear barbero(s)
-          </button>
         </div>
       </article>
 
@@ -907,6 +889,24 @@ export default function BarberiaDataPage() {
             </div>
           ))}
         </div>
+        <div className="px-4 pb-2">
+          <button
+            type="button"
+            onClick={createBarberosAccess}
+            className="inline-flex items-center justify-center rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-bold text-white transition hover:bg-[var(--accent-strong)]"
+          >
+            Crear barbero(s)
+          </button>
+        </div>
+        {creationState.barberosCreated > 0 ? (
+          <div className="px-4 pb-4">
+            <p className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-300">
+              {creationState.barberosCreated === 1
+                ? "Barbero creado con exito."
+                : `Barberos creados con exito: ${creationState.barberosCreated}.`}
+            </p>
+          </div>
+        ) : null}
       </article>
 
       <article className="panel-muted animate-rise p-4 text-sm">
