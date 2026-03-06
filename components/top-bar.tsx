@@ -64,7 +64,13 @@ export function TopBar() {
 
   return (
     <header className="animate-rise px-4 pt-3 sm:px-6 lg:px-10 lg:pt-6">
-      <div className="panel px-4 py-3 sm:px-5">
+      <div className="panel relative overflow-hidden px-4 py-3 sm:px-5">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute inset-0 bg-[url('/Fondoiniciodshb.jpg')] bg-cover bg-center opacity-22" />
+          <div className="absolute inset-0 bg-[linear-gradient(110deg,rgba(2,8,23,0.9),rgba(2,8,23,0.72)_48%,rgba(15,23,42,0.84))]" />
+        </div>
+
+        <div className="relative z-10">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
@@ -144,6 +150,7 @@ export function TopBar() {
               </Link>
             );
           })}
+        </div>
         </div>
       </div>
     </header>

@@ -20,6 +20,29 @@ function normalizePhone(value: unknown) {
   return normalizeText(value).replace(/\s+/g, "");
 }
 
+function isMissingDeletedAtColumn(message: string) {
+  const text = normalizeText(message).toLowerCase();
+  return (
+    text.includes("deleted_at") &&
+    (text.includes("does not exist") || text.includes("could not find") || text.includes("schema cache"))
+  );
+}
+
+async function fetchClientes(token: string, barberiaId: number) {
+  const baseSelect = `clientes_finales?select=id,nombre,telefono&barberia_id=eq.${barberiaId}&order=created_at.desc&limit=500`;
+
+  try {
+    return await postgrestRequest<ClienteRow[]>(
+      `${baseSelect}&deleted_at=is.null`,
+      token,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!isMissingDeletedAtColumn(message)) throw error;
+    return postgrestRequest<ClienteRow[]>(baseSelect, token);
+  }
+}
+
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
@@ -27,10 +50,7 @@ export async function GET() {
 
   try {
     const [clientes, citas] = await Promise.all([
-      postgrestRequest<ClienteRow[]>(
-        `clientes_finales?select=id,nombre,telefono&barberia_id=eq.${barberiaId}&deleted_at=is.null&order=created_at.desc&limit=500`,
-        token,
-      ),
+      fetchClientes(token, barberiaId),
       postgrestRequest<CitaPhoneRow[]>(
         `v_citas_completas?select=cliente_tel&barberia_id=eq.${barberiaId}&limit=2000`,
         token,

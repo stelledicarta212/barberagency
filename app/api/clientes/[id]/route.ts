@@ -18,17 +18,61 @@ type ClienteRow = {
   telefono: string;
 };
 
+function isMissingDeletedAtColumn(message: string) {
+  const text = normalizeText(message).toLowerCase();
+  return (
+    text.includes("deleted_at") &&
+    (text.includes("does not exist") || text.includes("could not find") || text.includes("schema cache"))
+  );
+}
+
 async function parseClienteId(paramsPromise: RouteContext["params"]) {
   const params = await paramsPromise;
   return toPositiveInt(params?.id);
 }
 
 async function readCliente(id: number, barberiaId: number, token: string) {
-  const rows = await postgrestRequest<ClienteRow[]>(
-    `clientes_finales?select=id,nombre,telefono&id=eq.${id}&barberia_id=eq.${barberiaId}&deleted_at=is.null&limit=1`,
-    token,
-  );
-  return Array.isArray(rows) ? rows[0] : null;
+  const basePath = `clientes_finales?select=id,nombre,telefono&id=eq.${id}&barberia_id=eq.${barberiaId}&limit=1`;
+  try {
+    const rows = await postgrestRequest<ClienteRow[]>(
+      `${basePath}&deleted_at=is.null`,
+      token,
+    );
+    return Array.isArray(rows) ? rows[0] : null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!isMissingDeletedAtColumn(message)) throw error;
+    const rows = await postgrestRequest<ClienteRow[]>(basePath, token);
+    return Array.isArray(rows) ? rows[0] : null;
+  }
+}
+
+async function updateCliente(params: {
+  token: string;
+  clienteId: number;
+  barberiaId: number;
+  body: Record<string, unknown>;
+}) {
+  const basePath = `clientes_finales?id=eq.${params.clienteId}&barberia_id=eq.${params.barberiaId}`;
+  try {
+    return await postgrestRequest<ClienteRow[]>(
+      `${basePath}&deleted_at=is.null`,
+      params.token,
+      {
+        method: "PATCH",
+        body: params.body,
+        preferRepresentation: true,
+      },
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!isMissingDeletedAtColumn(message)) throw error;
+    return postgrestRequest<ClienteRow[]>(basePath, params.token, {
+      method: "PATCH",
+      body: params.body,
+      preferRepresentation: true,
+    });
+  }
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
@@ -65,15 +109,12 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
-    const rows = await postgrestRequest<ClienteRow[]>(
-      `clientes_finales?id=eq.${clienteId}&barberia_id=eq.${barberiaId}&deleted_at=is.null`,
+    const rows = await updateCliente({
       token,
-      {
-        method: "PATCH",
-        body: { nombre, telefono },
-        preferRepresentation: true,
-      },
-    );
+      clienteId,
+      barberiaId,
+      body: { nombre, telefono },
+    });
 
     const row = rows?.[0];
     return NextResponse.json({
@@ -111,17 +152,30 @@ export async function DELETE(_request: Request, context: RouteContext) {
       );
     }
 
-    await postgrestRequest<unknown>(
-      `clientes_finales?id=eq.${clienteId}&barberia_id=eq.${barberiaId}&deleted_at=is.null`,
-      token,
-      {
-        method: "PATCH",
+    try {
+      await updateCliente({
+        token,
+        clienteId,
+        barberiaId,
         body: {
           deleted_at: new Date().toISOString(),
         },
-        preferRepresentation: true,
-      },
-    );
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (!isMissingDeletedAtColumn(message)) {
+        throw error;
+      }
+
+      await postgrestRequest<unknown>(
+        `clientes_finales?id=eq.${clienteId}&barberia_id=eq.${barberiaId}`,
+        token,
+        {
+          method: "DELETE",
+          preferRepresentation: true,
+        },
+      );
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
