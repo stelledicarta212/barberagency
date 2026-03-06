@@ -674,11 +674,6 @@ export async function POST(request: Request) {
       });
     }
 
-    await requestPostgrest<null>(`barberos?barberia_id=eq.${barberiaId}`, {
-      method: "DELETE",
-      token: ownerToken,
-    });
-
     const activeBarberosWithAccess = (Array.isArray(draft?.barberos) ? draft!.barberos : [])
       .map((barber, index) => {
         const access = draft?.accesos?.barberos?.[index];
@@ -717,14 +712,36 @@ export async function POST(request: Request) {
       });
     }
 
-    const barberosCreated =
-      barberosForInsert.length > 0
-        ? await upsertBarberosByUsuario({
-            token: ownerToken,
-            barberiaId,
-            barberos: barberosForInsert,
-          })
-        : 0;
+    let barberosCreated = 0;
+    try {
+      await requestPostgrest<null>(`barberos?barberia_id=eq.${barberiaId}`, {
+        method: "DELETE",
+        token: ownerToken,
+      });
+
+      if (barberosForInsert.length > 0) {
+        barberosCreated = await upsertBarberosByUsuario({
+          token: ownerToken,
+          barberiaId,
+          barberos: barberosForInsert,
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? clean(error.message) : "";
+      if (!isForeignKeyConstraintError(message, "citas_barbero_id_fkey")) {
+        throw error;
+      }
+
+      // Si ya hay citas apuntando a barberos existentes, evitamos borrado masivo
+      // y solo sincronizamos (update/insert) por usuario_id.
+      if (barberosForInsert.length > 0) {
+        barberosCreated = await upsertBarberosByUsuario({
+          token: ownerToken,
+          barberiaId,
+          barberos: barberosForInsert,
+        });
+      }
+    }
 
     return NextResponse.json({
       ok: true,

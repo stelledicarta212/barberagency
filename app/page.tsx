@@ -84,6 +84,8 @@ export default function Home() {
   return (
     <main className="relative min-h-screen overflow-hidden pb-16">
       <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-[url('/Fondoiniciodshb.jpg')] bg-cover bg-center opacity-30" />
+        <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(2,8,23,0.92),rgba(2,8,23,0.78)_45%,rgba(15,23,42,0.88))]" />
         <div className="absolute left-1/2 top-0 h-96 w-96 -translate-x-1/2 rounded-full bg-[color-mix(in_srgb,var(--accent)_24%,transparent)] blur-3xl" />
         <div className="absolute -left-12 top-1/3 h-72 w-72 rounded-full bg-[color-mix(in_srgb,#3b82f6_20%,transparent)] blur-3xl" />
         <div className="absolute -right-20 bottom-0 h-96 w-96 rounded-full bg-[color-mix(in_srgb,#14b8a6_16%,transparent)] blur-3xl" />
