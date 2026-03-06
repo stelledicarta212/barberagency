@@ -13,13 +13,18 @@ export default async function DashboardPage() {
   const { metrics, upcoming, source } = await getDashboardSnapshot();
 
   return (
-    <section className="space-y-5">
+    <section className="relative isolate overflow-hidden rounded-3xl border border-[var(--line)] p-3 sm:p-5">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-[url('/Fondoiniciodshb.jpg')] bg-cover bg-center opacity-35" />
+        <div className="absolute inset-0 bg-[linear-gradient(110deg,rgba(2,8,23,0.94),rgba(2,8,23,0.82)_45%,rgba(15,23,42,0.9))]" />
+      </div>
+
+      <div className="space-y-5">
       <article
-        className="animate-rise relative overflow-hidden rounded-2xl border border-[var(--line)]"
+        className="animate-rise relative overflow-hidden rounded-2xl border border-[var(--line)] bg-black/30"
         style={{ animationDelay: "20ms" }}
       >
-        <div className="absolute inset-0 bg-[url('/Fondoiniciodshb.jpg')] bg-cover bg-center" />
-        <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(2,8,23,0.95),rgba(2,8,23,0.7)_45%,rgba(2,8,23,0.85))]" />
+        <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(2,8,23,0.75),rgba(2,8,23,0.35)_45%,rgba(2,8,23,0.7))]" />
         <div className="relative z-10 flex min-h-[220px] flex-col justify-end p-5 sm:p-7">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-300/90">
             Barberagency
@@ -187,6 +192,7 @@ export default async function DashboardPage() {
             Siguiente paso: tipado exacto y cliente API para reemplazar mocks.
           </p>
         </article>
+      </div>
       </div>
     </section>
   );
