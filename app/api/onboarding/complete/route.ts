@@ -158,6 +158,13 @@ function isRlsErrorForTable(message: string, table: string) {
   );
 }
 
+function isForeignKeyConstraintError(message: string, constraintName?: string) {
+  const msg = clean(message).toLowerCase();
+  if (!msg.includes("violates foreign key constraint")) return false;
+  if (!constraintName) return true;
+  return msg.includes(constraintName.toLowerCase());
+}
+
 async function requestPostgrest<T>(
   path: string,
   options: {
@@ -395,6 +402,70 @@ async function insertServiciosWithFallback(params: {
   throw new Error(lastError || "No se pudo crear servicios.");
 }
 
+async function mergeServiciosWithoutDelete(params: {
+  token: string;
+  barberiaId: number;
+  ownerId: number;
+  servicios: Array<{
+    nombre: string;
+    duracion_min: number;
+    precio: number;
+  }>;
+}) {
+  if (params.servicios.length === 0) return;
+
+  const existing = await requestPostgrest<Array<{ id: number; nombre: string }>>(
+    `servicios?select=id,nombre&barberia_id=eq.${params.barberiaId}&limit=500`,
+    { token: params.token },
+  );
+
+  const indexByName = new Map<string, number>();
+  for (const row of existing ?? []) {
+    const key = clean(row.nombre).toLowerCase();
+    if (!key || indexByName.has(key)) continue;
+    indexByName.set(key, Number(row.id));
+  }
+
+  const toInsert: Array<{
+    nombre: string;
+    duracion_min: number;
+    precio: number;
+  }> = [];
+
+  for (const servicio of params.servicios) {
+    const key = clean(servicio.nombre).toLowerCase();
+    const existingId = key ? indexByName.get(key) : undefined;
+
+    if (existingId && Number.isFinite(existingId) && existingId > 0) {
+      await requestPostgrest<unknown[]>(
+        `servicios?id=eq.${existingId}&barberia_id=eq.${params.barberiaId}`,
+        {
+          method: "PATCH",
+          token: params.token,
+          body: {
+            nombre: servicio.nombre,
+            duracion_min: servicio.duracion_min,
+            precio: servicio.precio,
+          },
+          preferRepresentation: false,
+        },
+      );
+      continue;
+    }
+
+    toInsert.push(servicio);
+  }
+
+  if (toInsert.length > 0) {
+    await insertServiciosWithFallback({
+      token: params.token,
+      barberiaId: params.barberiaId,
+      ownerId: params.ownerId,
+      servicios: toInsert,
+    });
+  }
+}
+
 async function upsertBarberosByUsuario(params: {
   token: string;
   barberiaId: number;
@@ -539,11 +610,6 @@ export async function POST(request: Request) {
 
     const barberiaId = Number(barberia.id);
 
-    await requestPostgrest<null>(`servicios?barberia_id=eq.${barberiaId}`, {
-      method: "DELETE",
-      token: ownerToken,
-    });
-
     const servicios = Array.isArray(draft?.servicios)
       ? draft!.servicios
           .filter((s) => clean(s.nombre))
@@ -554,8 +620,27 @@ export async function POST(request: Request) {
           }))
       : [];
 
-    if (servicios.length > 0) {
-      await insertServiciosWithFallback({
+    try {
+      await requestPostgrest<null>(`servicios?barberia_id=eq.${barberiaId}`, {
+        method: "DELETE",
+        token: ownerToken,
+      });
+
+      if (servicios.length > 0) {
+        await insertServiciosWithFallback({
+          token: ownerToken,
+          barberiaId,
+          ownerId: Number(adminUser.id),
+          servicios,
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? clean(error.message) : "";
+      if (!isForeignKeyConstraintError(message, "citas_servicio_id_fkey")) {
+        throw error;
+      }
+
+      await mergeServiciosWithoutDelete({
         token: ownerToken,
         barberiaId,
         ownerId: Number(adminUser.id),
