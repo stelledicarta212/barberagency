@@ -111,6 +111,15 @@ function isValidEmail(input: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.trim());
 }
 
+function openNativePicker(input: HTMLInputElement) {
+  const picker = input as HTMLInputElement & { showPicker?: () => void };
+  if (typeof picker.showPicker === "function") {
+    try {
+      picker.showPicker();
+    } catch {}
+  }
+}
+
 function readDraft(): OnboardingDraft | null {
   try {
     const raw = localStorage.getItem("ba_onboarding_barberia");
@@ -775,6 +784,8 @@ export default function BarberiaDataPage() {
                   value={day.abre}
                   disabled={!day.activo}
                   onChange={(e) => updateSchedule(day.dia, "abre", e.target.value)}
+                  onFocus={(e) => openNativePicker(e.currentTarget)}
+                  onClick={(e) => openNativePicker(e.currentTarget)}
                   className="w-full rounded-lg border border-[var(--line)] bg-zinc-950 px-2 py-1.5 text-zinc-100 outline-none focus:border-zinc-500 disabled:opacity-50"
                 />
                 <input
@@ -782,6 +793,8 @@ export default function BarberiaDataPage() {
                   value={day.cierra}
                   disabled={!day.activo}
                   onChange={(e) => updateSchedule(day.dia, "cierra", e.target.value)}
+                  onFocus={(e) => openNativePicker(e.currentTarget)}
+                  onClick={(e) => openNativePicker(e.currentTarget)}
                   className="w-full rounded-lg border border-[var(--line)] bg-zinc-950 px-2 py-1.5 text-zinc-100 outline-none focus:border-zinc-500 disabled:opacity-50"
                 />
               </div>

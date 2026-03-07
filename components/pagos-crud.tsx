@@ -42,6 +42,15 @@ function formatMoneyCOP(value: number) {
   }).format(Number.isFinite(value) ? value : 0);
 }
 
+function openNativePicker(input: HTMLInputElement) {
+  const picker = input as HTMLInputElement & { showPicker?: () => void };
+  if (typeof picker.showPicker === "function") {
+    try {
+      picker.showPicker();
+    } catch {}
+  }
+}
+
 function toInputDate(value: string | null) {
   if (!value) return "";
   const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -455,6 +464,8 @@ export function PagosCrud() {
                     onChange={(event) =>
                       setForm((prev) => ({ ...prev, pagado_en: event.target.value }))
                     }
+                    onFocus={(event) => openNativePicker(event.currentTarget)}
+                    onClick={(event) => openNativePicker(event.currentTarget)}
                     className="h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--surface-muted)] px-3 text-sm text-zinc-100 outline-none focus:border-zinc-500"
                   />
                 </label>
