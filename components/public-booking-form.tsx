@@ -24,8 +24,8 @@ type Props = {
   services: ServiceOption[];
   barbers: BarberOption[];
   primaryColor: string;
-  backgroundColor: string;
-  textColor: string;
+  backgroundColor?: string;
+  textColor?: string;
 };
 
 function clean(value: unknown) {
@@ -38,6 +38,29 @@ function formatMoneyCOP(value: number) {
     currency: "COP",
     maximumFractionDigits: 0,
   }).format(Math.max(0, Number(value || 0)));
+}
+
+function normalizeHexColor(value: unknown, fallback: string) {
+  const color = clean(value);
+  if (/^#[0-9a-fA-F]{6}$/.test(color)) return color.toUpperCase();
+  return fallback.toUpperCase();
+}
+
+function luminance(hex: string) {
+  const cleanHex = normalizeHexColor(hex, "#000000").replace("#", "");
+  const r = Number.parseInt(cleanHex.slice(0, 2), 16);
+  const g = Number.parseInt(cleanHex.slice(2, 4), 16);
+  const b = Number.parseInt(cleanHex.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+function hasReasonableContrast(backgroundHex: string, foregroundHex: string) {
+  const diff = Math.abs(luminance(backgroundHex) - luminance(foregroundHex));
+  return diff >= 0.45;
+}
+
+function textOnBackground(hex: string) {
+  return luminance(hex) > 0.62 ? "#0F172A" : "#F8FAFC";
 }
 
 function getTodayISODate() {
@@ -69,6 +92,17 @@ export function PublicBookingForm({
     () => services.find((service) => service.id === servicioId) ?? null,
     [servicioId, services],
   );
+  const inputBackgroundColor = normalizeHexColor(backgroundColor, "#F8FAFC");
+  const preferredInputText = normalizeHexColor(textColor, "#0F172A");
+  const inputTextColor = hasReasonableContrast(inputBackgroundColor, preferredInputText)
+    ? preferredInputText
+    : textOnBackground(inputBackgroundColor);
+  const primaryTextColor = textOnBackground(primaryColor);
+  const inputStyle = {
+    borderColor: "var(--line)",
+    backgroundColor: inputBackgroundColor,
+    color: inputTextColor,
+  } as const;
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -127,11 +161,7 @@ export function PublicBookingForm({
             value={clienteNombre}
             onChange={(event) => setClienteNombre(event.target.value)}
             className="h-11 w-full rounded-lg border px-3 text-sm outline-none"
-            style={{
-              borderColor: `${textColor}33`,
-              backgroundColor: `${backgroundColor}EE`,
-              color: textColor,
-            }}
+            style={inputStyle}
             placeholder="Tu nombre"
           />
         </label>
@@ -145,11 +175,7 @@ export function PublicBookingForm({
             value={clienteTel}
             onChange={(event) => setClienteTel(event.target.value)}
             className="h-11 w-full rounded-lg border px-3 text-sm outline-none"
-            style={{
-              borderColor: `${textColor}33`,
-              backgroundColor: `${backgroundColor}EE`,
-              color: textColor,
-            }}
+            style={inputStyle}
             placeholder="3001234567"
           />
         </label>
@@ -167,11 +193,7 @@ export function PublicBookingForm({
             value={fecha}
             onChange={(event) => setFecha(event.target.value)}
             className="h-11 w-full rounded-lg border px-3 text-sm outline-none"
-            style={{
-              borderColor: `${textColor}33`,
-              backgroundColor: `${backgroundColor}EE`,
-              color: textColor,
-            }}
+            style={inputStyle}
           />
         </label>
 
@@ -185,11 +207,7 @@ export function PublicBookingForm({
             value={horaInicio}
             onChange={(event) => setHoraInicio(event.target.value)}
             className="h-11 w-full rounded-lg border px-3 text-sm outline-none"
-            style={{
-              borderColor: `${textColor}33`,
-              backgroundColor: `${backgroundColor}EE`,
-              color: textColor,
-            }}
+            style={inputStyle}
           />
         </label>
       </div>
@@ -204,11 +222,7 @@ export function PublicBookingForm({
             value={servicioId}
             onChange={(event) => setServicioId(Number(event.target.value))}
             className="h-11 w-full rounded-lg border px-3 text-sm outline-none"
-            style={{
-              borderColor: `${textColor}33`,
-              backgroundColor: `${backgroundColor}EE`,
-              color: textColor,
-            }}
+            style={inputStyle}
           >
             {services.length === 0 ? <option value={0}>Sin servicios disponibles</option> : null}
             {services.map((service) => (
@@ -227,11 +241,7 @@ export function PublicBookingForm({
             value={barberoId}
             onChange={(event) => setBarberoId(Number(event.target.value))}
             className="h-11 w-full rounded-lg border px-3 text-sm outline-none"
-            style={{
-              borderColor: `${textColor}33`,
-              backgroundColor: `${backgroundColor}EE`,
-              color: textColor,
-            }}
+            style={inputStyle}
           >
             {barbers.length === 0 ? <option value={0}>Primer barbero disponible</option> : null}
             {barbers.map((barber) => (
@@ -276,7 +286,7 @@ export function PublicBookingForm({
         type="submit"
         disabled={loading || services.length === 0}
         className="inline-flex h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-extrabold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
-        style={{ backgroundColor: primaryColor }}
+        style={{ backgroundColor: primaryColor, color: primaryTextColor }}
       >
         {loading ? "Guardando..." : "Reservar cita"}
       </button>
