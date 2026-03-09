@@ -2,12 +2,20 @@ import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
+import {
+  buildPublicLandingPath,
+  buildPublicLandingUrl,
+  buildQrImageUrl,
+  ensureLandingPersistence,
+} from "@/lib/public-landing";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session-token";
 
 type OnboardingDraft = {
   barberia?: {
     nombre?: string;
     slug?: string;
+    logo_url?: string;
+    cover_url?: string;
     telefono?: string;
     direccion?: string;
     ciudad?: string;
@@ -41,6 +49,12 @@ type OnboardingDraft = {
       password?: string;
       activo?: boolean;
     }>;
+  };
+  branding?: {
+    color_primary?: string;
+    color_secondary?: string;
+    color_background?: string;
+    color_text?: string;
   };
 };
 
@@ -609,6 +623,38 @@ export async function POST(request: Request) {
     });
 
     const barberiaId = Number(barberia.id);
+    const requestOrigin = new URL(request.url).origin;
+    let publicLanding = {
+      barberiaId,
+      slug: barberia.slug,
+      enabled: true,
+      qrEnabled: true,
+      publicPath: buildPublicLandingPath(barberia.slug),
+      publicUrl: buildPublicLandingUrl(requestOrigin, barberia.slug),
+      qrUrl: buildQrImageUrl(buildPublicLandingUrl(requestOrigin, barberia.slug)),
+    };
+    let publicLandingWarning = "";
+
+    try {
+      publicLanding = await ensureLandingPersistence({
+        token: ownerToken,
+        barberiaId,
+        fallbackSlug: barberia.slug,
+        fallbackName: nombreBarberia,
+        origin: requestOrigin,
+        logoUrl: clean(draft?.barberia?.logo_url),
+        coverUrl: clean(draft?.barberia?.cover_url),
+        city: clean(draft?.barberia?.ciudad),
+        address: clean(draft?.barberia?.direccion),
+        phone: clean(draft?.barberia?.telefono),
+        whatsapp: clean(draft?.barberia?.telefono),
+        contactEmail: adminEmail,
+        branding: draft?.branding,
+      });
+    } catch (error) {
+      publicLandingWarning =
+        error instanceof Error ? clean(error.message) : "No se pudo persistir landing publica.";
+    }
 
     const servicios = Array.isArray(draft?.servicios)
       ? draft!.servicios
@@ -754,6 +800,14 @@ export async function POST(request: Request) {
         id: barberiaId,
         slug: barberia.slug,
       },
+      public_landing: {
+        slug: publicLanding.slug,
+        enabled: publicLanding.enabled,
+        public_path: publicLanding.publicPath,
+        public_url: publicLanding.publicUrl,
+        qr_url: publicLanding.qrUrl,
+      },
+      warning: publicLandingWarning || undefined,
       created: {
         servicios: servicios.length,
         horarios: horarios.length,

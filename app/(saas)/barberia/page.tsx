@@ -1,8 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Eye, EyeOff, Plus, Save, Trash2 } from "lucide-react";
+import {
+  ArrowRight,
+  Copy,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Plus,
+  QrCode,
+  Save,
+  Trash2,
+} from "lucide-react";
 
 type ServiceForm = {
   id: string;
@@ -36,6 +46,14 @@ type SaveState =
 type CreationState = {
   adminCreated: boolean;
   barberosCreated: number;
+};
+
+type PublicLandingInfo = {
+  slug: string;
+  public_url: string;
+  public_path: string;
+  qr_url: string;
+  enabled: boolean;
 };
 
 type OnboardingDraft = {
@@ -184,6 +202,8 @@ export default function BarberiaDataPage() {
     adminCreated: false,
     barberosCreated: 0,
   });
+  const [publicLanding, setPublicLanding] = useState<PublicLandingInfo | null>(null);
+  const [landingLoading, setLandingLoading] = useState(true);
 
   if (!hydrated && typeof window !== "undefined") {
     const draft = readDraft();
@@ -240,6 +260,48 @@ export default function BarberiaDataPage() {
     }
     setHydrated(true);
   }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPublicLanding() {
+      try {
+        const response = await fetch("/api/barberia/public-profile", { cache: "no-store" });
+        const data = (await response.json().catch(() => ({}))) as {
+          ok?: boolean;
+          slug?: string;
+          public_url?: string;
+          public_path?: string;
+          qr_url?: string;
+          enabled?: boolean;
+        };
+
+        if (!response.ok || !data.ok || !data.public_url) return;
+
+        const next: PublicLandingInfo = {
+          slug: (data.slug ?? "").toString().trim(),
+          public_url: (data.public_url ?? "").toString().trim(),
+          public_path: (data.public_path ?? "").toString().trim(),
+          qr_url: (data.qr_url ?? "").toString().trim(),
+          enabled: Boolean(data.enabled),
+        };
+
+        if (cancelled) return;
+        setPublicLanding(next);
+
+        if (next.public_url) localStorage.setItem("ba_public_landing_url", next.public_url);
+        if (next.qr_url) localStorage.setItem("ba_public_landing_qr_url", next.qr_url);
+        if (next.slug) localStorage.setItem("ba_public_landing_slug", next.slug);
+      } finally {
+        if (!cancelled) setLandingLoading(false);
+      }
+    }
+
+    loadPublicLanding().catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const activeServices = useMemo(
     () => services.filter((s) => s.nombre.trim() && s.duracionMin > 0).length,
@@ -494,6 +556,22 @@ export default function BarberiaDataPage() {
     if (ok) router.push("/barberia/plantilla");
   }
 
+  async function copyPublicUrl() {
+    if (!publicLanding?.public_url) return;
+    try {
+      await navigator.clipboard.writeText(publicLanding.public_url);
+      setSaveState({
+        type: "success",
+        message: "URL publica copiada. Ya puedes usarla en tu boton o QR.",
+      });
+    } catch {
+      setSaveState({
+        type: "error",
+        message: "No se pudo copiar automaticamente. Copiala manualmente desde el campo.",
+      });
+    }
+  }
+
   return (
     <section className="space-y-5 overflow-x-hidden pb-8 [&_input]:text-base [&_select]:text-base [&_textarea]:text-base sm:[&_input]:text-sm sm:[&_select]:text-sm sm:[&_textarea]:text-sm">
       <div className="animate-rise flex flex-wrap items-start justify-between gap-3">
@@ -541,6 +619,70 @@ export default function BarberiaDataPage() {
         >
           {saveState.message}
         </div>
+      ) : null}
+
+      {publicLanding ? (
+        <article className="panel animate-rise p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-black uppercase tracking-wide text-zinc-300">
+                Landing publica + QR
+              </h2>
+              <p className="mt-1 text-xs text-zinc-400">
+                Esta URL queda guardada en BD y sirve para reservas desde codigo QR.
+              </p>
+            </div>
+            <span
+              className={`rounded-full border px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${
+                publicLanding.enabled
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                  : "border-amber-500/40 bg-amber-500/10 text-amber-300"
+              }`}
+            >
+              {publicLanding.enabled ? "Activa" : "Pendiente"}
+            </span>
+          </div>
+
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              readOnly
+              value={publicLanding.public_url}
+              className="h-11 w-full rounded-lg border border-[var(--line)] bg-zinc-950 px-3 text-sm text-zinc-100"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={copyPublicUrl}
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] px-3 text-xs font-bold text-zinc-100 transition hover:border-zinc-500"
+              >
+                <Copy className="size-4" />
+                Copiar
+              </button>
+              <a
+                href={publicLanding.public_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-[var(--accent)] px-3 text-xs font-bold text-white transition hover:bg-[var(--accent-strong)]"
+              >
+                <ExternalLink className="size-4" />
+                Abrir
+              </a>
+              <a
+                href={publicLanding.qr_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] px-3 text-xs font-bold text-zinc-100 transition hover:border-zinc-500"
+              >
+                <QrCode className="size-4" />
+                QR
+              </a>
+            </div>
+          </div>
+        </article>
+      ) : landingLoading ? (
+        <article className="panel animate-rise p-4">
+          <p className="text-sm text-zinc-400">Cargando URL publica de reservas...</p>
+        </article>
       ) : null}
 
       <article className="panel animate-rise p-4">

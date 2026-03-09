@@ -501,6 +501,12 @@ export default function BarberiaTemplatePage() {
       ok?: boolean;
       message?: string;
       admin?: { email?: string };
+      public_landing?: {
+        slug?: string;
+        public_url?: string;
+        public_path?: string;
+        qr_url?: string;
+      };
     };
 
     if (!response.ok || !result.ok) {
@@ -519,6 +525,13 @@ export default function BarberiaTemplatePage() {
     if (adminEmail) localStorage.setItem("ba_login_prefill_email", adminEmail);
     if (adminPassword) localStorage.setItem("ba_login_prefill_password", adminPassword);
     localStorage.setItem("ba_login_prefill_source", "onboarding");
+
+    const landingUrl = safeString(result.public_landing?.public_url);
+    const landingQr = safeString(result.public_landing?.qr_url);
+    const landingSlug = safeString(result.public_landing?.slug);
+    if (landingUrl) localStorage.setItem("ba_public_landing_url", landingUrl);
+    if (landingQr) localStorage.setItem("ba_public_landing_qr_url", landingQr);
+    if (landingSlug) localStorage.setItem("ba_public_landing_slug", landingSlug);
 
     setSaveState({
       type: "success",
