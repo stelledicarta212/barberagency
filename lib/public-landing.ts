@@ -145,8 +145,35 @@ function normalizeHexColor(value: unknown, fallback: string) {
 
 function normalizeOrigin(origin: string) {
   const fallback = "https://barberagency-app.gymh5g.easypanel.host";
-  const candidate = clean(origin) || fallback;
+  const configured = clean(process.env.APP_PUBLIC_URL || process.env.NEXT_PUBLIC_APP_URL);
+  const candidate = configured || clean(origin) || fallback;
   return candidate.endsWith("/") ? candidate.slice(0, -1) : candidate;
+}
+
+function normalizeBaseDomain(value: string) {
+  const cleaned = clean(value).toLowerCase();
+  if (!cleaned) return "";
+
+  const noProtocol = cleaned
+    .replace(/^https?:\/\//, "")
+    .replace(/\/.*$/, "")
+    .trim();
+
+  return noProtocol.replace(/:\d+$/, "");
+}
+
+function getLandingBaseDomain() {
+  return normalizeBaseDomain(
+    process.env.LANDING_BASE_DOMAIN || process.env.NEXT_PUBLIC_LANDING_BASE_DOMAIN || "",
+  );
+}
+
+function getLandingProtocol(origin: string) {
+  const explicit = clean(process.env.LANDING_BASE_PROTOCOL);
+  if (explicit === "http" || explicit === "https") return explicit;
+  const normalizedOrigin = normalizeOrigin(origin);
+  if (normalizedOrigin.startsWith("http://")) return "http";
+  return "https";
 }
 
 function postgrestErrorMessage(payload: unknown) {
@@ -230,7 +257,14 @@ export function buildPublicLandingPath(slug: string) {
 }
 
 export function buildPublicLandingUrl(origin: string, slug: string) {
-  return `${normalizeOrigin(origin)}${buildPublicLandingPath(slug)}`;
+  const safeSlug = slugify(slug) || "mi-barberia";
+  const landingBaseDomain = getLandingBaseDomain();
+
+  if (landingBaseDomain) {
+    return `${getLandingProtocol(origin)}://${safeSlug}.${landingBaseDomain}`;
+  }
+
+  return `${normalizeOrigin(origin)}${buildPublicLandingPath(safeSlug)}`;
 }
 
 export function buildQrImageUrl(publicUrl: string) {
