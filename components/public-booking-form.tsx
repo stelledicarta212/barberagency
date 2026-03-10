@@ -49,6 +49,20 @@ function normalizeHexColor(value: unknown, fallback: string) {
   return fallback.toUpperCase();
 }
 
+function normalizeCssColor(value: unknown, fallback: string) {
+  const color = clean(value);
+  if (!color) return fallback;
+  if (
+    /^#[0-9a-fA-F]{6}$/.test(color) ||
+    /^rgba?\(/i.test(color) ||
+    /^hsla?\(/i.test(color) ||
+    /^var\(/i.test(color)
+  ) {
+    return color;
+  }
+  return fallback;
+}
+
 function luminance(hex: string) {
   const cleanHex = normalizeHexColor(hex, "#000000").replace("#", "");
   const r = Number.parseInt(cleanHex.slice(0, 2), 16);
@@ -98,11 +112,12 @@ export function PublicBookingForm({
     () => services.find((service) => service.id === servicioId) ?? null,
     [servicioId, services],
   );
-  const inputBackgroundColor = normalizeHexColor(backgroundColor, "#F8FAFC");
+  const inputBackgroundColor = normalizeCssColor(backgroundColor, "#F8FAFC");
+  const inputContrastBase = normalizeHexColor(backgroundColor, "#F8FAFC");
   const preferredInputText = normalizeHexColor(textColor, "#0F172A");
-  const inputTextColor = hasReasonableContrast(inputBackgroundColor, preferredInputText)
+  const inputTextColor = hasReasonableContrast(inputContrastBase, preferredInputText)
     ? preferredInputText
-    : textOnBackground(inputBackgroundColor);
+    : textOnBackground(inputContrastBase);
   const primaryTextColor = textOnBackground(primaryColor);
   const inputStyle = {
     borderColor: clean(borderColor) || "var(--line)",

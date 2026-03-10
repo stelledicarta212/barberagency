@@ -383,7 +383,7 @@ export default async function PublicBookingPage(context: PageContext) {
                     }))}
                     barbers={landing.barbers}
                     primaryColor={primaryColor}
-                    backgroundColor={panelMutedBackground}
+                    backgroundColor={isLight ? "#F8FAFC" : surfaceColor}
                     textColor={pageTextColor}
                     borderColor={panelBorderColor}
                     submitLabel={ctaLabel}
