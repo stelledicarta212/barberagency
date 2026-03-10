@@ -63,6 +63,12 @@ type AssetRow = {
   orden?: number | null;
 };
 
+type JwtPayload = {
+  sub?: string | number;
+  user_id?: number;
+  email?: string;
+};
+
 export type PublicLandingBrandingInput = {
   color_primary?: string;
   color_secondary?: string;
@@ -88,6 +94,8 @@ export type PublicLandingBrandingInput = {
   hero_image_url?: string;
   image_secondary_url?: string;
   image_tertiary_url?: string;
+  owner_user_id?: number;
+  owner_email?: string;
 };
 
 export type PublicLandingThemeInput = PublicLandingBrandingInput;
@@ -119,6 +127,8 @@ export type PublicLandingBrandingConfig = {
   heroImageUrl: string;
   secondaryImageUrl: string;
   tertiaryImageUrl: string;
+  ownerUserId?: number;
+  ownerEmail?: string;
 };
 
 export type EnsureLandingParams = {
@@ -233,6 +243,20 @@ function normalizeOrigin(origin: string) {
   return candidate.endsWith("/") ? candidate.slice(0, -1) : candidate;
 }
 
+function decodeJwtPayload(token: string): JwtPayload | null {
+  const value = clean(token);
+  const parts = value.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const payloadRaw = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = payloadRaw + "=".repeat((4 - (payloadRaw.length % 4)) % 4);
+    const json = Buffer.from(padded, "base64").toString("utf8");
+    return JSON.parse(json) as JwtPayload;
+  } catch {
+    return null;
+  }
+}
+
 function normalizeBaseDomain(value: string) {
   const cleaned = clean(value).toLowerCase();
   if (!cleaned) return "";
@@ -323,6 +347,8 @@ function sanitizeBrandingConfig(
     raw.color_text ?? raw.textColor,
     themeMode === "light" ? "#111827" : "#E2E8F0",
   );
+  const ownerUserId = toSafePositiveInt(raw.owner_user_id ?? raw.ownerUserId);
+  const ownerEmail = clean(raw.owner_email ?? raw.ownerEmail).toLowerCase();
 
   return {
     templateId: clean(raw.template_id ?? raw.templateId) || "classic",
@@ -361,6 +387,8 @@ function sanitizeBrandingConfig(
     heroImageUrl: clean(raw.hero_image_url ?? raw.heroImageUrl),
     secondaryImageUrl: clean(raw.image_secondary_url ?? raw.secondaryImageUrl),
     tertiaryImageUrl: clean(raw.image_tertiary_url ?? raw.tertiaryImageUrl),
+    ownerUserId: ownerUserId > 0 ? ownerUserId : undefined,
+    ownerEmail: ownerEmail.includes("@") ? ownerEmail : undefined,
   };
 }
 
@@ -607,9 +635,21 @@ async function upsertLandingBrandingAsset(
   token: string,
   barberiaId: number,
   branding: PublicLandingBrandingInput | null | undefined,
+  ownerMeta?: { ownerUserId?: number; ownerEmail?: string },
 ) {
-  const config = sanitizeBrandingConfig(branding);
-  if (!config) return;
+  const parsed = sanitizeBrandingConfig(branding);
+  if (!parsed) return;
+  const config: PublicLandingBrandingConfig = {
+    ...parsed,
+    ownerUserId:
+      toSafePositiveInt(ownerMeta?.ownerUserId) ||
+      toSafePositiveInt(parsed.ownerUserId) ||
+      undefined,
+    ownerEmail:
+      clean(ownerMeta?.ownerEmail).toLowerCase() ||
+      clean(parsed.ownerEmail).toLowerCase() ||
+      undefined,
+  };
 
   const configPayload = encodeBrandingConfig(config);
 
@@ -707,6 +747,11 @@ export async function ensureLandingPersistence(
     slugify(existing?.slug || params.fallbackSlug || `barberia-${params.barberiaId}`) ||
     `barberia-${params.barberiaId}`;
   const publicName = clean(params.fallbackName) || `Barberia ${params.barberiaId}`;
+  const tokenClaims = decodeJwtPayload(params.token);
+  const ownerUserIdFromToken =
+    toSafePositiveInt(tokenClaims?.user_id) || toSafePositiveInt(tokenClaims?.sub);
+  const ownerEmailFromToken = clean(tokenClaims?.email).toLowerCase();
+  const ownerEmailForBranding = clean(params.contactEmail).toLowerCase() || ownerEmailFromToken;
 
   let selectedSlug = baseSlug;
 
@@ -756,7 +801,10 @@ export async function ensureLandingPersistence(
         }
         const publicUrl = buildPublicLandingUrl(params.origin, selectedSlug);
         const qrUrl = buildQrImageUrl(publicUrl);
-        await upsertLandingBrandingAsset(params.token, params.barberiaId, params.branding);
+        await upsertLandingBrandingAsset(params.token, params.barberiaId, params.branding, {
+          ownerUserId: ownerUserIdFromToken || undefined,
+          ownerEmail: ownerEmailForBranding || undefined,
+        });
         await upsertQrAsset(params.token, params.barberiaId, qrUrl);
         try {
           await upsertThemeForBarberia(params.token, params.barberiaId, params.branding);
@@ -869,6 +917,27 @@ export async function readPublicLandingContext(
   let branding = await readLandingBrandingAsset(barberiaId);
   if (!branding && ownerToken) {
     branding = await readLandingBrandingAsset(barberiaId, ownerToken);
+  }
+
+  if (!ownerToken) {
+    const brandingOwnerId = toSafePositiveInt(branding?.ownerUserId);
+    const brandingOwnerEmail = clean(branding?.ownerEmail).toLowerCase();
+    if (brandingOwnerId) {
+      ownerUserId = brandingOwnerId;
+      ownerToken = buildAdminToken(
+        brandingOwnerId,
+        brandingOwnerEmail ||
+          clean(row.email_contacto).toLowerCase() ||
+          `owner${brandingOwnerId}@barberagency.local`,
+      );
+    }
+  }
+
+  if ((!themeRows || themeRows.length === 0) && ownerToken) {
+    themeRows = await requestPostgrest<ThemeRow[]>(
+      `barberia_theme?select=barberia_id,primary_color,secondary_color,background_color,text_color&barberia_id=eq.${barberiaId}&limit=1`,
+      { token: ownerToken },
+    ).catch(() => themeRows);
   }
 
   let services: Array<{
