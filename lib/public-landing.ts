@@ -34,6 +34,15 @@ type UserIdRow = {
   id: number;
 };
 
+type UserEmailRow = {
+  id: number;
+  email?: string | null;
+};
+
+type BarberiaOwnerRow = {
+  owner_id?: number | null;
+};
+
 type ServiceRow = {
   id: number;
   nombre: string | null;
@@ -454,6 +463,31 @@ export async function resolveOwnerAuthByEmail(email: string) {
   };
 }
 
+export async function resolveOwnerAuthByBarberiaId(barberiaId: number) {
+  const safeBarberiaId = toSafePositiveInt(barberiaId);
+  if (!safeBarberiaId) return null;
+
+  const bootstrapToken = buildAdminToken(1, "bootstrap@barberagency.local");
+  const barberiaRows = await requestPostgrest<BarberiaOwnerRow[]>(
+    `barberias?select=owner_id&id=eq.${safeBarberiaId}&limit=1`,
+    { token: bootstrapToken },
+  );
+  const ownerUserId = toSafePositiveInt(barberiaRows?.[0]?.owner_id);
+  if (!ownerUserId) return null;
+
+  const userRows = await requestPostgrest<UserEmailRow[]>(
+    `usuarios?select=id,email&id=eq.${ownerUserId}&limit=1`,
+    { token: bootstrapToken },
+  ).catch(() => [] as UserEmailRow[]);
+  const ownerEmail =
+    clean(userRows?.[0]?.email).toLowerCase() || `owner${ownerUserId}@barberagency.local`;
+
+  return {
+    userId: ownerUserId,
+    token: buildAdminToken(ownerUserId, ownerEmail),
+  };
+}
+
 async function upsertThemeForBarberia(
   token: string,
   barberiaId: number,
@@ -635,11 +669,11 @@ async function upsertLandingBrandingAsset(
   }
 }
 
-async function readLandingBrandingAsset(barberiaId: number) {
+async function readLandingBrandingAsset(barberiaId: number, token?: string | null) {
   try {
     const rows = await requestPostgrest<AssetRow[]>(
       `barberia_assets?select=id,tipo,url,orden&barberia_id=eq.${barberiaId}&tipo=eq.other&order=updated_at.desc&limit=50`,
-      {},
+      token ? { token } : {},
     );
     for (const row of rows ?? []) {
       const config = decodeBrandingConfig(row.url);
@@ -808,19 +842,33 @@ export async function readPublicLandingContext(
   const barberiaId = toSafePositiveInt(row.barberia_id);
   if (!barberiaId) return null;
 
-  const themeRows = await requestPostgrest<ThemeRow[]>(
-    `barberia_theme?select=barberia_id,primary_color,secondary_color,background_color,text_color&barberia_id=eq.${barberiaId}&limit=1`,
-    {},
-  ).catch(() => [] as ThemeRow[]);
-  const theme = themeRows?.[0];
-  const branding = await readLandingBrandingAsset(barberiaId);
-
   let ownerUserId: number | null = null;
   let ownerToken: string | null = null;
-  const ownerAuth = await resolveOwnerAuthByEmail(clean(row.email_contacto)).catch(() => null);
+  let ownerAuth = await resolveOwnerAuthByEmail(clean(row.email_contacto)).catch(() => null);
+  if (!ownerAuth) {
+    ownerAuth = await resolveOwnerAuthByBarberiaId(barberiaId).catch(() => null);
+  }
   if (ownerAuth?.userId && ownerAuth.token) {
     ownerUserId = ownerAuth.userId;
     ownerToken = ownerAuth.token;
+  }
+
+  let themeRows = await requestPostgrest<ThemeRow[]>(
+    `barberia_theme?select=barberia_id,primary_color,secondary_color,background_color,text_color&barberia_id=eq.${barberiaId}&limit=1`,
+    {},
+  ).catch(() => [] as ThemeRow[]);
+
+  if ((!themeRows || themeRows.length === 0) && ownerToken) {
+    themeRows = await requestPostgrest<ThemeRow[]>(
+      `barberia_theme?select=barberia_id,primary_color,secondary_color,background_color,text_color&barberia_id=eq.${barberiaId}&limit=1`,
+      { token: ownerToken },
+    ).catch(() => themeRows);
+  }
+  const theme = themeRows?.[0];
+
+  let branding = await readLandingBrandingAsset(barberiaId);
+  if (!branding && ownerToken) {
+    branding = await readLandingBrandingAsset(barberiaId, ownerToken);
   }
 
   let services: Array<{
@@ -833,35 +881,58 @@ export async function readPublicLandingContext(
     id: number;
     nombre: string;
   }> = [];
+  let serviceRows: ServiceRow[] = [];
+  let barberRows: BarberRow[] = [];
 
   if (ownerToken) {
-    const [serviceRows, barberRows] = await Promise.all([
+    [serviceRows, barberRows] = await Promise.all([
       requestPostgrest<ServiceRow[]>(
         `servicios?select=id,nombre,duracion_min,precio&barberia_id=eq.${barberiaId}&order=nombre.asc&limit=100`,
         { token: ownerToken },
       ).catch(() => [] as ServiceRow[]),
       requestPostgrest<BarberRow[]>(
-        `barberos?select=id,nombre,activo&barberia_id=eq.${barberiaId}&activo=is.true&order=nombre.asc&limit=100`,
+        `barberos?select=id,nombre,activo&barberia_id=eq.${barberiaId}&order=nombre.asc&limit=100`,
         { token: ownerToken },
       ).catch(() => [] as BarberRow[]),
     ]);
-
-    services = (serviceRows ?? [])
-      .map((service) => ({
-        id: toSafePositiveInt(service.id),
-        nombre: clean(service.nombre),
-        duracionMin: Math.max(5, Number(service.duracion_min ?? 0)),
-        precio: Math.max(0, Number(service.precio ?? 0)),
-      }))
-      .filter((service) => service.id > 0 && service.nombre);
-
-    barbers = (barberRows ?? [])
-      .map((barber) => ({
-        id: toSafePositiveInt(barber.id),
-        nombre: clean(barber.nombre),
-      }))
-      .filter((barber) => barber.id > 0 && barber.nombre);
   }
+
+  if (serviceRows.length === 0 || barberRows.length === 0) {
+    const [anonServiceRows, anonBarberRows] = await Promise.all([
+      requestPostgrest<ServiceRow[]>(
+        `servicios?select=id,nombre,duracion_min,precio&barberia_id=eq.${barberiaId}&order=nombre.asc&limit=100`,
+        {},
+      ).catch(() => [] as ServiceRow[]),
+      requestPostgrest<BarberRow[]>(
+        `barberos?select=id,nombre,activo&barberia_id=eq.${barberiaId}&order=nombre.asc&limit=100`,
+        {},
+      ).catch(() => [] as BarberRow[]),
+    ]);
+
+    if (serviceRows.length === 0) {
+      serviceRows = anonServiceRows;
+    }
+    if (barberRows.length === 0) {
+      barberRows = anonBarberRows;
+    }
+  }
+
+  services = (serviceRows ?? [])
+    .map((service) => ({
+      id: toSafePositiveInt(service.id),
+      nombre: clean(service.nombre),
+      duracionMin: Math.max(5, Number(service.duracion_min ?? 0)),
+      precio: Math.max(0, Number(service.precio ?? 0)),
+    }))
+    .filter((service) => service.id > 0 && service.nombre);
+
+  barbers = (barberRows ?? [])
+    .filter((barber) => barber?.activo !== false)
+    .map((barber) => ({
+      id: toSafePositiveInt(barber.id),
+      nombre: clean(barber.nombre),
+    }))
+    .filter((barber) => barber.id > 0 && barber.nombre);
 
   return {
     profile: {

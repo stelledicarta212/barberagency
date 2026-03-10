@@ -169,7 +169,7 @@ export default async function PublicBookingPage(context: PageContext) {
   const publicFontPair = clean(branding?.fontPair);
   const fonts = resolveFontPreset(publicFontPair);
   const ctaColor = normalizeHexColor(
-    clean(branding?.palette.secondary) || clean(branding?.palette.primary),
+    clean(branding?.palette.primary) || clean(landing.theme.primaryColor),
     "#DC2626",
   );
   const primaryTextColor = textOnBackground(ctaColor);
