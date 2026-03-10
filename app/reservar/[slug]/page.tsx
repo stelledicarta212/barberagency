@@ -1,7 +1,7 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { PublicBookingForm } from "@/components/public-booking-form";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { PublicThemeToggle } from "@/components/public-theme-toggle";
 import {
   buildPublicLandingUrl,
   buildQrImageUrl,
@@ -97,6 +97,10 @@ export default async function PublicBookingPage(context: PageContext) {
   const landing = await readPublicLandingContext(params.slug);
   if (!landing) notFound();
 
+  const cookieStore = await cookies();
+  const themeCookie = clean(cookieStore.get("ba_public_theme")?.value).toLowerCase();
+  const forcedTheme = themeCookie === "light" || themeCookie === "dark" ? themeCookie : "";
+
   const headerStore = await headers();
   const proto = clean(headerStore.get("x-forwarded-proto")) || "https";
   const host =
@@ -119,7 +123,7 @@ export default async function PublicBookingPage(context: PageContext) {
     "#FFFFFF",
   );
   const textColor = normalizeHexColor(branding?.palette.text ?? landing.theme.textColor, "#111827");
-  const themeMode = resolveThemeMode(branding?.themeMode, backgroundColor);
+  const themeMode = resolveThemeMode(forcedTheme || branding?.themeMode, backgroundColor);
   const surfaceColor = normalizeHexColor(
     branding?.palette.surface,
     themeMode === "light" ? "#FFFFFF" : "#0F172A",
@@ -244,7 +248,8 @@ export default async function PublicBookingPage(context: PageContext) {
                 >
                   Compartir URL
                 </a>
-                <ThemeToggle
+                <PublicThemeToggle
+                  initialTheme={themeMode}
                   className="text-xs font-semibold"
                   style={{
                     borderColor: secondaryButtonBorder,

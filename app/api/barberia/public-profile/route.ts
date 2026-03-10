@@ -7,6 +7,7 @@ import {
   ensureLandingPersistence,
   type PublicLandingBrandingInput,
 } from "@/lib/public-landing";
+import { signSessionToken } from "@/lib/session-token";
 
 type BarberiaRow = {
   id: number;
@@ -53,10 +54,15 @@ async function getBarberia(token: string, barberiaId: number) {
 export async function GET(request: Request) {
   const auth = await requireAuth({ adminOnly: true });
   if (!auth.ok) return auth.response;
-  const { token, barberiaId } = auth.context;
+  const { session, barberiaId } = auth.context;
+  const ownerToken = signSessionToken({
+    userId: session.user_id,
+    role: session.role,
+    email: session.email,
+  });
 
   try {
-    const barberia = await getBarberia(token, barberiaId);
+    const barberia = await getBarberia(ownerToken, barberiaId);
     if (!barberia?.id) {
       return NextResponse.json(
         { ok: false, message: "No se encontro la barberia activa." },
@@ -81,7 +87,7 @@ export async function GET(request: Request) {
 
     try {
       publicLanding = await ensureLandingPersistence({
-        token,
+        token: ownerToken,
         barberiaId,
         fallbackSlug,
         fallbackName,
@@ -99,7 +105,7 @@ export async function GET(request: Request) {
           : "No se pudo asegurar el perfil publico.";
       const profileRows = await postgrestRequest<PublicProfileRow[]>(
         `barberia_public_profiles?select=slug,enabled,qr_enabled&barberia_id=eq.${barberiaId}&limit=1`,
-        token,
+        ownerToken,
       ).catch(() => [] as PublicProfileRow[]);
       const profile = profileRows?.[0];
       const profileSlug = clean(profile?.slug) || fallbackSlug;
@@ -136,11 +142,16 @@ export async function POST(request: Request) {
   const auth = await requireAuth({ adminOnly: true });
   if (!auth.ok) return auth.response;
 
-  const { token, barberiaId, session } = auth.context;
+  const { barberiaId, session } = auth.context;
+  const ownerToken = signSessionToken({
+    userId: session.user_id,
+    role: session.role,
+    email: session.email,
+  });
 
   try {
     const body = (await request.json().catch(() => ({}))) as UpdateBody;
-    const barberia = await getBarberia(token, barberiaId);
+    const barberia = await getBarberia(ownerToken, barberiaId);
     if (!barberia?.id) {
       return NextResponse.json(
         { ok: false, message: "No se encontro la barberia activa." },
@@ -155,7 +166,7 @@ export async function POST(request: Request) {
     const heroImageFromBranding = clean(body?.branding?.hero_image_url);
 
     const publicLanding = await ensureLandingPersistence({
-      token,
+      token: ownerToken,
       barberiaId,
       fallbackSlug,
       fallbackName,
