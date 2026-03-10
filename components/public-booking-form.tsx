@@ -26,6 +26,8 @@ type Props = {
   primaryColor: string;
   backgroundColor?: string;
   textColor?: string;
+  borderColor?: string;
+  submitLabel?: string;
 };
 
 function clean(value: unknown) {
@@ -78,6 +80,8 @@ export function PublicBookingForm({
   primaryColor,
   backgroundColor,
   textColor,
+  borderColor,
+  submitLabel,
 }: Props) {
   const [clienteNombre, setClienteNombre] = useState("");
   const [clienteTel, setClienteTel] = useState("");
@@ -99,7 +103,7 @@ export function PublicBookingForm({
     : textOnBackground(inputBackgroundColor);
   const primaryTextColor = textOnBackground(primaryColor);
   const inputStyle = {
-    borderColor: "var(--line)",
+    borderColor: clean(borderColor) || "var(--line)",
     backgroundColor: inputBackgroundColor,
     color: inputTextColor,
   } as const;
@@ -288,7 +292,7 @@ export function PublicBookingForm({
         className="inline-flex h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-extrabold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
         style={{ backgroundColor: primaryColor, color: primaryTextColor }}
       >
-        {loading ? "Guardando..." : "Reservar cita"}
+        {loading ? "Guardando..." : clean(submitLabel) || "Reservar cita"}
       </button>
     </form>
   );

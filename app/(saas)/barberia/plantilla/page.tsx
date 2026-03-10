@@ -361,6 +361,7 @@ export default function BarberiaTemplatePage() {
   );
 
   const [saveState, setSaveState] = useState<SaveState>({ type: "idle", message: "" });
+  const [savingStyle, setSavingStyle] = useState(false);
 
   useEffect(() => {
     if (!draft) router.replace("/barberia?onboarding=1");
@@ -441,10 +442,10 @@ export default function BarberiaTemplatePage() {
     };
   }
 
-  function saveBranding(completeOnboarding: boolean) {
+  function saveBranding(completeOnboarding: boolean): OnboardingDraft | null {
     if (!draft) {
       setSaveState({ type: "error", message: "No hay datos de barberia. Vuelve al paso 1." });
-      return false;
+      return null;
     }
 
     const payload: OnboardingDraft = { ...draft, branding: buildBrandingPayload() };
@@ -454,29 +455,79 @@ export default function BarberiaTemplatePage() {
         type: "error",
         message: "Completa credenciales de admin y al menos un barbero activo en el paso 1.",
       });
-      return false;
+      return null;
     }
 
     localStorage.setItem("ba_onboarding_barberia", JSON.stringify(payload));
 
     if (completeOnboarding) {
       localStorage.setItem("ba_onboarding_done", "true");
-      return true;
+      return payload;
     }
 
     localStorage.removeItem("ba_onboarding_done");
+    return payload;
+  }
+
+  async function handleSaveStyle() {
+    const payload = saveBranding(false);
+    if (!payload) return;
+
+    setSavingStyle(true);
     setSaveState({
       type: "success",
-      message: "Landing guardada. Puedes seguir editando textos, colores e imagenes.",
+      message: "Guardando estilo en BD para que la landing publica herede diseno y colores...",
     });
-    return true;
+
+    try {
+      const response = await fetch("/api/barberia/public-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          branding: payload.branding,
+          barberia: payload.barberia,
+        }),
+      });
+
+      const result = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        message?: string;
+        public_url?: string;
+        qr_url?: string;
+        slug?: string;
+      };
+
+      if (!response.ok || !result.ok) {
+        setSaveState({
+          type: "error",
+          message: result.message || "No se pudo guardar la landing publica en BD.",
+        });
+        return;
+      }
+
+      const landingUrl = safeString(result.public_url);
+      const landingQr = safeString(result.qr_url);
+      const landingSlug = safeString(result.slug);
+      if (landingUrl) localStorage.setItem("ba_public_landing_url", landingUrl);
+      if (landingQr) localStorage.setItem("ba_public_landing_qr_url", landingQr);
+      if (landingSlug) localStorage.setItem("ba_public_landing_slug", landingSlug);
+
+      setSaveState({
+        type: "success",
+        message: "Estilo guardado en BD. Tu landing publica ya refleja plantilla y colores.",
+      });
+    } catch {
+      setSaveState({
+        type: "error",
+        message: "Error de red guardando estilo. Intenta nuevamente.",
+      });
+    } finally {
+      setSavingStyle(false);
+    }
   }
 
   async function handleFinish() {
-    const ok = saveBranding(true);
-    if (!ok) return;
-
-    const latestDraft = readDraft();
+    const latestDraft = saveBranding(true);
     if (!latestDraft) {
       setSaveState({
         type: "error",
@@ -588,11 +639,12 @@ export default function BarberiaTemplatePage() {
           </button>
           <button
             type="button"
-            onClick={() => saveBranding(false)}
+            onClick={() => void handleSaveStyle()}
+            disabled={savingStyle}
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-bold text-zinc-100 transition hover:border-zinc-500 sm:w-auto"
           >
             <Save className="size-4" />
-            Guardar estilo
+            {savingStyle ? "Guardando..." : "Guardar estilo"}
           </button>
           <button
             type="button"

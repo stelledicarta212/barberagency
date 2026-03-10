@@ -51,10 +51,30 @@ type OnboardingDraft = {
     }>;
   };
   branding?: {
+    template_id?: string;
+    template_name?: string;
+    theme_mode?: "light" | "dark";
     color_primary?: string;
     color_secondary?: string;
     color_background?: string;
+    color_surface?: string;
     color_text?: string;
+    cta_label?: string;
+    logo_width?: number;
+    font_pair?: string;
+    nav_items?: string[];
+    hero_badge?: string;
+    hero_title?: string;
+    hero_subtitle?: string;
+    booking_title?: string;
+    booking_subtitle?: string;
+    benefit_1?: string;
+    benefit_2?: string;
+    benefit_3?: string;
+    footer_note?: string;
+    hero_image_url?: string;
+    image_secondary_url?: string;
+    image_tertiary_url?: string;
   };
 };
 
@@ -643,7 +663,7 @@ export async function POST(request: Request) {
         fallbackName: nombreBarberia,
         origin: requestOrigin,
         logoUrl: clean(draft?.barberia?.logo_url),
-        coverUrl: clean(draft?.barberia?.cover_url),
+        coverUrl: clean(draft?.branding?.hero_image_url) || clean(draft?.barberia?.cover_url),
         city: clean(draft?.barberia?.ciudad),
         address: clean(draft?.barberia?.direccion),
         phone: clean(draft?.barberia?.telefono),

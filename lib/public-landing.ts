@@ -47,11 +47,69 @@ type BarberRow = {
   activo: boolean | null;
 };
 
-export type PublicLandingThemeInput = {
+type AssetRow = {
+  id: number;
+  tipo?: string | null;
+  url?: string | null;
+  orden?: number | null;
+};
+
+export type PublicLandingBrandingInput = {
   color_primary?: string;
   color_secondary?: string;
   color_background?: string;
+  color_surface?: string;
   color_text?: string;
+  theme_mode?: "light" | "dark";
+  template_id?: string;
+  template_name?: string;
+  cta_label?: string;
+  logo_width?: number;
+  font_pair?: string;
+  nav_items?: string[];
+  hero_badge?: string;
+  hero_title?: string;
+  hero_subtitle?: string;
+  booking_title?: string;
+  booking_subtitle?: string;
+  benefit_1?: string;
+  benefit_2?: string;
+  benefit_3?: string;
+  footer_note?: string;
+  hero_image_url?: string;
+  image_secondary_url?: string;
+  image_tertiary_url?: string;
+};
+
+export type PublicLandingThemeInput = PublicLandingBrandingInput;
+
+export type PublicLandingBrandingConfig = {
+  templateId: string;
+  templateName: string;
+  themeMode: "light" | "dark";
+  palette: {
+    primary: string;
+    secondary: string;
+    background: string;
+    surface: string;
+    text: string;
+  };
+  ctaLabel: string;
+  logoWidth: number;
+  fontPair: string;
+  navItems: string[];
+  heroBadge: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  bookingTitle: string;
+  bookingSubtitle: string;
+  benefit1: string;
+  benefit2: string;
+  benefit3: string;
+  footerNote: string;
+  heroImageUrl: string;
+  secondaryImageUrl: string;
+  tertiaryImageUrl: string;
 };
 
 export type EnsureLandingParams = {
@@ -67,7 +125,7 @@ export type EnsureLandingParams = {
   phone?: string | null;
   whatsapp?: string | null;
   contactEmail?: string | null;
-  branding?: PublicLandingThemeInput | null;
+  branding?: PublicLandingBrandingInput | null;
 };
 
 export type PublicLandingMeta = {
@@ -103,6 +161,7 @@ export type PublicLandingContext = {
     backgroundColor: string;
     textColor: string;
   };
+  branding: PublicLandingBrandingConfig | null;
   services: Array<{
     id: number;
     nombre: string;
@@ -141,6 +200,21 @@ function normalizeHexColor(value: unknown, fallback: string) {
   const color = clean(value);
   if (/^#[0-9a-fA-F]{6}$/.test(color)) return color.toUpperCase();
   return fallback.toUpperCase();
+}
+
+function normalizeMode(value: unknown, fallback: "light" | "dark") {
+  const mode = clean(value).toLowerCase();
+  if (mode === "light" || mode === "dark") return mode;
+  return fallback;
+}
+
+function normalizeStringArray(value: unknown, fallback: string[]) {
+  if (!Array.isArray(value)) return [...fallback];
+  const list = value
+    .map((item) => clean(item))
+    .filter(Boolean)
+    .slice(0, 4);
+  return list.length > 0 ? list : [...fallback];
 }
 
 function normalizeOrigin(origin: string) {
@@ -206,6 +280,88 @@ function isUniqueConstraintError(message: string, constraintName: string) {
   const msg = clean(message).toLowerCase();
   const constraint = constraintName.toLowerCase();
   return msg.includes("duplicate key value violates unique constraint") && msg.includes(constraint);
+}
+
+const LANDING_CONFIG_PREFIX = "ba://landing-config/";
+
+function sanitizeBrandingConfig(
+  branding: PublicLandingBrandingInput | null | undefined,
+): PublicLandingBrandingConfig | null {
+  if (!branding || typeof branding !== "object") return null;
+
+  const raw = branding as Record<string, unknown>;
+  const themeMode = normalizeMode(raw.theme_mode ?? raw.themeMode, "dark");
+  const palettePrimary = normalizeHexColor(raw.color_primary ?? raw.primaryColor, "#111827");
+  const paletteSecondary = normalizeHexColor(raw.color_secondary ?? raw.secondaryColor, "#F59E0B");
+  const paletteBackground = normalizeHexColor(
+    raw.color_background ?? raw.backgroundColor,
+    themeMode === "light" ? "#FFFFFF" : "#020617",
+  );
+  const paletteSurface = normalizeHexColor(
+    raw.color_surface ?? raw.surfaceColor,
+    themeMode === "light" ? "#FFFFFF" : "#0F172A",
+  );
+  const paletteText = normalizeHexColor(
+    raw.color_text ?? raw.textColor,
+    themeMode === "light" ? "#111827" : "#E2E8F0",
+  );
+
+  return {
+    templateId: clean(raw.template_id ?? raw.templateId) || "classic",
+    templateName: clean(raw.template_name ?? raw.templateName) || "Classic Barber",
+    themeMode,
+    palette: {
+      primary: palettePrimary,
+      secondary: paletteSecondary,
+      background: paletteBackground,
+      surface: paletteSurface,
+      text: paletteText,
+    },
+    ctaLabel: clean(raw.cta_label ?? raw.ctaLabel) || "Reservar cita",
+    logoWidth: Math.max(64, Math.min(220, Number(raw.logo_width ?? raw.logoWidth ?? 110) || 110)),
+    fontPair: clean(raw.font_pair ?? raw.fontPair) || "Barlow + DM Sans",
+    navItems: normalizeStringArray(raw.nav_items ?? raw.navItems, [
+      "Inicio",
+      "Servicios",
+      "Equipo",
+      "Reserva",
+    ]),
+    heroBadge: clean(raw.hero_badge ?? raw.heroBadge) || "Reserva online",
+    heroTitle:
+      clean(raw.hero_title ?? raw.heroTitle) || "Agenda tu cita en minutos con disponibilidad real.",
+    heroSubtitle:
+      clean(raw.hero_subtitle ?? raw.heroSubtitle) ||
+      "Selecciona servicio, fecha y hora. Te confirmamos al instante para que llegues sin esperas.",
+    bookingTitle: clean(raw.booking_title ?? raw.bookingTitle) || "Reserva ahora",
+    bookingSubtitle:
+      clean(raw.booking_subtitle ?? raw.bookingSubtitle) ||
+      "Tu cita queda guardada en la agenda de la barberia.",
+    benefit1: clean(raw.benefit_1 ?? raw.benefit1),
+    benefit2: clean(raw.benefit_2 ?? raw.benefit2),
+    benefit3: clean(raw.benefit_3 ?? raw.benefit3),
+    footerNote: clean(raw.footer_note ?? raw.footerNote),
+    heroImageUrl: clean(raw.hero_image_url ?? raw.heroImageUrl),
+    secondaryImageUrl: clean(raw.image_secondary_url ?? raw.secondaryImageUrl),
+    tertiaryImageUrl: clean(raw.image_tertiary_url ?? raw.tertiaryImageUrl),
+  };
+}
+
+function encodeBrandingConfig(config: PublicLandingBrandingConfig) {
+  const raw = JSON.stringify(config);
+  return `${LANDING_CONFIG_PREFIX}${Buffer.from(raw, "utf8").toString("base64url")}`;
+}
+
+function decodeBrandingConfig(urlValue: unknown): PublicLandingBrandingConfig | null {
+  const value = clean(urlValue);
+  if (!value.startsWith(LANDING_CONFIG_PREFIX)) return null;
+  try {
+    const encoded = value.slice(LANDING_CONFIG_PREFIX.length);
+    const decoded = Buffer.from(encoded, "base64url").toString("utf8");
+    const parsed = JSON.parse(decoded) as PublicLandingBrandingInput | null;
+    return sanitizeBrandingConfig(parsed);
+  } catch {
+    return null;
+  }
 }
 
 async function requestPostgrest<T>(
@@ -294,6 +450,10 @@ async function upsertThemeForBarberia(
   barberiaId: number,
   branding: PublicLandingThemeInput | null | undefined,
 ) {
+  // Avoid resetting the theme with defaults when caller is only ensuring
+  // profile/slug persistence and did not send branding payload.
+  if (!branding || typeof branding !== "object") return;
+
   let includeBackground = true;
   let includeText = true;
   let includeSecondary = true;
@@ -399,6 +559,87 @@ async function upsertQrAsset(token: string, barberiaId: number, qrUrl: string) {
   }
 }
 
+async function upsertLandingBrandingAsset(
+  token: string,
+  barberiaId: number,
+  branding: PublicLandingBrandingInput | null | undefined,
+) {
+  const config = sanitizeBrandingConfig(branding);
+  if (!config) return;
+
+  const configPayload = encodeBrandingConfig(config);
+
+  try {
+    const rows = await requestPostgrest<AssetRow[]>(
+      `barberia_assets?select=id,tipo,url,orden&barberia_id=eq.${barberiaId}&tipo=eq.other&order=updated_at.desc&limit=50`,
+      { token },
+    );
+
+    const existing = (rows ?? []).find((row) => {
+      const url = clean(row.url);
+      return url.startsWith(LANDING_CONFIG_PREFIX) || toSafePositiveInt(row.orden) === 999;
+    });
+    const existingId = toSafePositiveInt(existing?.id);
+
+    if (existingId) {
+      await requestPostgrest<unknown>(
+        `barberia_assets?id=eq.${existingId}`,
+        {
+          method: "PATCH",
+          token,
+          body: {
+            url: configPayload,
+            orden: 999,
+            activo: true,
+          },
+          preferRepresentation: true,
+        },
+      );
+      return;
+    }
+
+    await requestPostgrest<unknown>("barberia_assets", {
+      method: "POST",
+      token,
+      body: {
+        barberia_id: barberiaId,
+        tipo: "other",
+        url: configPayload,
+        orden: 999,
+        activo: true,
+      },
+      preferRepresentation: true,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? clean(error.message) : "";
+    if (
+      isUndefinedTableError(message, "barberia_assets") ||
+      isMissingColumnError(message, "tipo") ||
+      isMissingColumnError(message, "url") ||
+      isMissingColumnError(message, "orden")
+    ) {
+      return;
+    }
+    throw error;
+  }
+}
+
+async function readLandingBrandingAsset(barberiaId: number) {
+  try {
+    const rows = await requestPostgrest<AssetRow[]>(
+      `barberia_assets?select=id,tipo,url,orden&barberia_id=eq.${barberiaId}&tipo=eq.other&order=updated_at.desc&limit=50`,
+      {},
+    );
+    for (const row of rows ?? []) {
+      const config = decodeBrandingConfig(row.url);
+      if (config) return config;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function ensureLandingPersistence(
   params: EnsureLandingParams,
 ): Promise<PublicLandingMeta> {
@@ -472,6 +713,7 @@ export async function ensureLandingPersistence(
         const qrUrl = buildQrImageUrl(publicUrl);
         await upsertThemeForBarberia(params.token, params.barberiaId, params.branding);
         await upsertQrAsset(params.token, params.barberiaId, qrUrl);
+        await upsertLandingBrandingAsset(params.token, params.barberiaId, params.branding);
 
         return {
           barberiaId: params.barberiaId,
@@ -553,6 +795,7 @@ export async function readPublicLandingContext(
     {},
   ).catch(() => [] as ThemeRow[]);
   const theme = themeRows?.[0];
+  const branding = await readLandingBrandingAsset(barberiaId);
 
   let ownerUserId: number | null = null;
   let ownerToken: string | null = null;
@@ -625,6 +868,7 @@ export async function readPublicLandingContext(
       backgroundColor: normalizeHexColor(theme?.background_color, "#FFFFFF"),
       textColor: normalizeHexColor(theme?.text_color, "#111827"),
     },
+    branding,
     services,
     barbers,
     ownerUserId,
