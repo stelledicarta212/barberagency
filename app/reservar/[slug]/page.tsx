@@ -62,7 +62,7 @@ function textOnBackground(hex: string) {
 
 function hasReasonableContrast(backgroundHex: string, foregroundHex: string) {
   const diff = Math.abs(luminance(backgroundHex) - luminance(foregroundHex));
-  return diff >= 0.45;
+  return diff >= 0.44;
 }
 
 function resolveThemeMode(mode: unknown, backgroundColor: string): ThemeMode {
@@ -129,7 +129,7 @@ export default async function PublicBookingPage(context: PageContext) {
   );
   const desiredTextColor = normalizeHexColor(
     clean(branding?.palette.text) || clean(landing.theme.textColor),
-    "#111827",
+    "#E2E8F0",
   );
   const themeMode = resolveThemeMode(forcedTheme || branding?.themeMode, backgroundColor);
   const surfaceColor = normalizeHexColor(
@@ -137,11 +137,16 @@ export default async function PublicBookingPage(context: PageContext) {
     themeMode === "light" ? "#FFFFFF" : "#0F172A",
   );
   const isLight = themeMode === "light";
-  const fallbackTextColor = isLight ? "#0F172A" : "#F8FAFC";
   const pageTextColor = hasReasonableContrast(backgroundColor, desiredTextColor)
     ? desiredTextColor
-    : fallbackTextColor;
-  const pageSoftText = hexToRgba(pageTextColor, isLight ? 0.76 : 0.84);
+    : textOnBackground(backgroundColor);
+  const panelTextColor = hasReasonableContrast(
+    isLight ? "#FFFFFF" : surfaceColor,
+    pageTextColor,
+  )
+    ? pageTextColor
+    : textOnBackground(isLight ? "#FFFFFF" : surfaceColor);
+  const pageSoftText = hexToRgba(panelTextColor, isLight ? 0.76 : 0.84);
   const panelBackground = isLight ? hexToRgba("#FFFFFF", 0.9) : hexToRgba(surfaceColor, 0.88);
   const panelMutedBackground = isLight ? hexToRgba("#FFFFFF", 0.76) : hexToRgba(surfaceColor, 0.74);
   const panelBorderColor = hexToRgba(secondaryColor, isLight ? 0.34 : 0.54);
@@ -156,14 +161,18 @@ export default async function PublicBookingPage(context: PageContext) {
   const chipText = isLight ? pageTextColor : textOnBackground(primaryColor);
   const statsBackground = isLight ? hexToRgba("#FFFFFF", 0.72) : hexToRgba("#020617", 0.44);
   const statsBorder = isLight ? panelSoftBorderColor : hexToRgba("#FFFFFF", 0.24);
-  const statsText = isLight ? pageTextColor : "#F8FAFC";
-  const statsLabel = isLight ? hexToRgba(pageTextColor, 0.72) : hexToRgba("#F8FAFC", 0.72);
-  const heroHeadingColor = isLight ? "#0F172A" : "#F8FAFC";
-  const heroBodyColor = isLight ? hexToRgba("#0F172A", 0.88) : hexToRgba("#F8FAFC", 0.9);
-  const heroBadgeColor = isLight ? hexToRgba("#0F172A", 0.82) : hexToRgba("#F8FAFC", 0.95);
+  const statsText = "#F8FAFC";
+  const statsLabel = hexToRgba("#F8FAFC", 0.76);
+  const heroHeadingColor = "#F8FAFC";
+  const heroBodyColor = hexToRgba("#F8FAFC", 0.9);
+  const heroBadgeColor = hexToRgba("#F8FAFC", 0.96);
   const publicFontPair = clean(branding?.fontPair);
   const fonts = resolveFontPreset(publicFontPair);
-  const primaryTextColor = textOnBackground(primaryColor);
+  const ctaColor = normalizeHexColor(
+    clean(branding?.palette.secondary) || clean(branding?.palette.primary),
+    "#DC2626",
+  );
+  const primaryTextColor = textOnBackground(ctaColor);
   const secondaryTextColor = textOnBackground(secondaryColor);
 
   const publicUrl = buildPublicLandingUrl(origin, landing.profile.slug);
@@ -193,7 +202,7 @@ export default async function PublicBookingPage(context: PageContext) {
     .filter(Boolean);
 
   const heroOverlay = isLight
-    ? `linear-gradient(108deg, ${hexToRgba("#FFFFFF", 0.74)} 0%, ${hexToRgba(backgroundColor, 0.54)} 34%, ${hexToRgba(primaryColor, 0.36)} 100%)`
+    ? `linear-gradient(108deg, ${hexToRgba("#020617", 0.34)} 0%, ${hexToRgba("#020617", 0.52)} 36%, ${hexToRgba("#020617", 0.74)} 100%)`
     : `linear-gradient(110deg, ${hexToRgba("#020617", 0.3)} 0%, ${hexToRgba("#020617", 0.6)} 42%, ${hexToRgba("#020617", 0.88)} 100%)`;
 
   return (
@@ -375,6 +384,7 @@ export default async function PublicBookingPage(context: PageContext) {
                 style={{
                   borderColor: panelBorderColor,
                   backgroundColor: panelBackground,
+                  color: panelTextColor,
                   boxShadow: `0 10px 26px ${hexToRgba("#020617", isLight ? 0.14 : 0.5)}`,
                 }}
               >
@@ -402,8 +412,9 @@ export default async function PublicBookingPage(context: PageContext) {
                     }))}
                     barbers={landing.barbers}
                     primaryColor={primaryColor}
+                    accentColor={ctaColor}
                     backgroundColor={isLight ? "#F8FAFC" : surfaceColor}
-                    textColor={pageTextColor}
+                    textColor={panelTextColor}
                     borderColor={panelBorderColor}
                     submitLabel={ctaLabel}
                     fontFamily={fonts.body}
@@ -418,7 +429,11 @@ export default async function PublicBookingPage(context: PageContext) {
       <section className="mx-auto mt-5 grid w-full max-w-7xl gap-4 px-4 sm:px-6 lg:grid-cols-[1fr_1fr_0.9fr] lg:px-8">
         <article
           className="rounded-2xl border p-4"
-          style={{ borderColor: panelBorderColor, backgroundColor: panelBackground }}
+          style={{
+            borderColor: panelBorderColor,
+            backgroundColor: panelBackground,
+            color: panelTextColor,
+          }}
         >
           <p
             className="text-xs font-semibold uppercase tracking-[0.2em]"
@@ -455,7 +470,11 @@ export default async function PublicBookingPage(context: PageContext) {
 
         <article
           className="rounded-2xl border p-4"
-          style={{ borderColor: panelBorderColor, backgroundColor: panelBackground }}
+          style={{
+            borderColor: panelBorderColor,
+            backgroundColor: panelBackground,
+            color: panelTextColor,
+          }}
         >
           <p
             className="text-xs font-semibold uppercase tracking-[0.2em]"
@@ -488,7 +507,11 @@ export default async function PublicBookingPage(context: PageContext) {
 
         <article
           className="rounded-2xl border p-4"
-          style={{ borderColor: panelBorderColor, backgroundColor: panelBackground }}
+          style={{
+            borderColor: panelBorderColor,
+            backgroundColor: panelBackground,
+            color: panelTextColor,
+          }}
         >
           <p
             className="text-xs font-semibold uppercase tracking-[0.2em]"
@@ -521,7 +544,11 @@ export default async function PublicBookingPage(context: PageContext) {
       <section className="mx-auto mt-4 grid w-full max-w-7xl gap-4 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
         <article
           className="overflow-hidden rounded-2xl border"
-          style={{ borderColor: panelBorderColor, backgroundColor: panelBackground }}
+          style={{
+            borderColor: panelBorderColor,
+            backgroundColor: panelBackground,
+            color: panelTextColor,
+          }}
         >
           <img src={secondaryImage} alt="Imagen secundaria barberia" className="h-56 w-full object-cover" />
           <div className="p-4">
@@ -536,7 +563,11 @@ export default async function PublicBookingPage(context: PageContext) {
 
         <article
           className="overflow-hidden rounded-2xl border"
-          style={{ borderColor: panelBorderColor, backgroundColor: panelBackground }}
+          style={{
+            borderColor: panelBorderColor,
+            backgroundColor: panelBackground,
+            color: panelTextColor,
+          }}
         >
           <img src={tertiaryImage} alt="Imagen terciaria barberia" className="h-56 w-full object-cover" />
           <div className="p-4">
@@ -552,7 +583,7 @@ export default async function PublicBookingPage(context: PageContext) {
               <a
                 href={publicUrl}
                 className="rounded-lg px-3 py-2 text-xs font-bold"
-                style={{ backgroundColor: primaryColor, color: primaryTextColor, fontFamily: fonts.heading }}
+                style={{ backgroundColor: ctaColor, color: primaryTextColor, fontFamily: fonts.heading }}
               >
                 {ctaLabel}
               </a>

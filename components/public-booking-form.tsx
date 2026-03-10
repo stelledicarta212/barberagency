@@ -24,6 +24,7 @@ type Props = {
   services: ServiceOption[];
   barbers: BarberOption[];
   primaryColor: string;
+  accentColor?: string;
   backgroundColor?: string;
   textColor?: string;
   borderColor?: string;
@@ -101,6 +102,7 @@ export function PublicBookingForm({
   services,
   barbers,
   primaryColor,
+  accentColor,
   backgroundColor,
   textColor,
   borderColor,
@@ -126,14 +128,18 @@ export function PublicBookingForm({
   const inputTextColor = hasReasonableContrast(inputContrastBase, preferredInputText)
     ? preferredInputText
     : textOnBackground(inputContrastBase);
-  const primaryTextColor = textOnBackground(primaryColor);
+  const normalizedPrimary = normalizeHexColor(primaryColor, "#DC2626");
+  const normalizedAccent = normalizeHexColor(accentColor, normalizedPrimary);
+  const actionColor = normalizedAccent === "#111827" ? "#DC2626" : normalizedAccent;
+  const actionTextColor = textOnBackground(actionColor);
   const inputStyle = {
     borderColor: clean(borderColor) || "var(--line)",
     backgroundColor: inputBackgroundColor,
     color: inputTextColor,
   } as const;
   const bookingDisabled = services.length === 0;
-  const buttonBackground = bookingDisabled ? hexToRgba(primaryColor, 0.78) : primaryColor;
+  const buttonBackground = bookingDisabled ? hexToRgba(actionColor, 0.9) : actionColor;
+  const buttonBorderColor = hexToRgba(actionColor, bookingDisabled ? 0.7 : 0.95);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -316,8 +322,12 @@ export function PublicBookingForm({
       <button
         type="submit"
         disabled={loading || bookingDisabled}
-        className="inline-flex h-10 w-full items-center justify-center rounded-lg px-4 text-sm font-extrabold text-white transition disabled:cursor-not-allowed"
-        style={{ backgroundColor: buttonBackground, color: primaryTextColor }}
+        className="inline-flex h-10 w-full items-center justify-center rounded-lg border px-4 text-sm font-extrabold transition disabled:cursor-not-allowed"
+        style={{
+          backgroundColor: buttonBackground,
+          borderColor: buttonBorderColor,
+          color: actionTextColor,
+        }}
       >
         {loading ? "Guardando..." : clean(submitLabel) || "Reservar cita"}
       </button>
