@@ -558,6 +558,7 @@ async function upsertQrAsset(token: string, barberiaId: number, qrUrl: string) {
   } catch (error) {
     const message = error instanceof Error ? clean(error.message) : "";
     if (
+      isRlsPolicyError(message, "barberia_assets") ||
       isUndefinedTableError(message, "barberia_assets") ||
       isMissingColumnError(message, "tipo") ||
       isMissingColumnError(message, "url")
@@ -622,6 +623,7 @@ async function upsertLandingBrandingAsset(
   } catch (error) {
     const message = error instanceof Error ? clean(error.message) : "";
     if (
+      isRlsPolicyError(message, "barberia_assets") ||
       isUndefinedTableError(message, "barberia_assets") ||
       isMissingColumnError(message, "tipo") ||
       isMissingColumnError(message, "url") ||
