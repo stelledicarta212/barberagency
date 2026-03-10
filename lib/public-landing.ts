@@ -282,6 +282,15 @@ function isUniqueConstraintError(message: string, constraintName: string) {
   return msg.includes("duplicate key value violates unique constraint") && msg.includes(constraint);
 }
 
+function isRlsPolicyError(message: string, table: string) {
+  const msg = clean(message).toLowerCase();
+  const tbl = table.toLowerCase();
+  return (
+    msg.includes("row-level security policy") &&
+    (msg.includes(`\"${tbl}\"`) || msg.includes(`'${tbl}'`) || msg.includes(` ${tbl}`))
+  );
+}
+
 const LANDING_CONFIG_PREFIX = "ba://landing-config/";
 
 function sanitizeBrandingConfig(
@@ -711,9 +720,16 @@ export async function ensureLandingPersistence(
         }
         const publicUrl = buildPublicLandingUrl(params.origin, selectedSlug);
         const qrUrl = buildQrImageUrl(publicUrl);
-        await upsertThemeForBarberia(params.token, params.barberiaId, params.branding);
-        await upsertQrAsset(params.token, params.barberiaId, qrUrl);
         await upsertLandingBrandingAsset(params.token, params.barberiaId, params.branding);
+        await upsertQrAsset(params.token, params.barberiaId, qrUrl);
+        try {
+          await upsertThemeForBarberia(params.token, params.barberiaId, params.branding);
+        } catch (error) {
+          const message = error instanceof Error ? clean(error.message) : "";
+          // If only theme RLS is misconfigured, keep landing flow working
+          // because branding data already drives the public landing render.
+          if (!isRlsPolicyError(message, "barberia_theme")) throw error;
+        }
 
         return {
           barberiaId: params.barberiaId,
