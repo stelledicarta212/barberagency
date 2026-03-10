@@ -193,17 +193,17 @@ export default async function PublicBookingPage(context: PageContext) {
     >
       <section className="relative left-1/2 right-1/2 -mx-[50vw] mt-3 w-screen">
         <article
-          className="relative h-[500px] overflow-hidden border-y"
+          className="relative min-h-[500px] overflow-hidden border-y"
           style={{ borderColor: panelBorderColor }}
         >
           <img
             src={heroImage}
             alt={`Portada ${landing.profile.nombrePublico}`}
-            className="h-full w-full object-cover object-center"
+            className="absolute inset-0 h-full w-full object-cover object-center"
           />
           <div className="absolute inset-0" style={{ background: heroOverlay }} />
 
-          <div className="absolute inset-0 z-10 mx-auto flex h-full w-full max-w-7xl flex-col px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+          <div className="relative z-10 mx-auto flex min-h-[500px] w-full max-w-7xl flex-col px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
             <header className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <img
@@ -362,7 +362,10 @@ export default async function PublicBookingPage(context: PageContext) {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: pageSoftText }}>
                   Formulario global
                 </p>
-                <h3 className="mt-1 text-3xl font-black" style={{ fontFamily: fonts.heading }}>
+                <h3
+                  className="mt-1 text-2xl font-black leading-tight sm:text-3xl"
+                  style={{ fontFamily: fonts.heading }}
+                >
                   {bookingTitle}
                 </h3>
                 <p className="mt-1 text-sm" style={{ color: pageSoftText }}>

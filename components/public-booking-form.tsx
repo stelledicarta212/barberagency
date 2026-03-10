@@ -166,7 +166,7 @@ export function PublicBookingForm({
             required
             value={clienteNombre}
             onChange={(event) => setClienteNombre(event.target.value)}
-            className="h-11 w-full rounded-lg border px-3 text-sm outline-none"
+            className="h-10 w-full rounded-lg border px-3 text-sm outline-none"
             style={inputStyle}
             placeholder="Tu nombre"
           />
@@ -180,7 +180,7 @@ export function PublicBookingForm({
             required
             value={clienteTel}
             onChange={(event) => setClienteTel(event.target.value)}
-            className="h-11 w-full rounded-lg border px-3 text-sm outline-none"
+            className="h-10 w-full rounded-lg border px-3 text-sm outline-none"
             style={inputStyle}
             placeholder="3001234567"
           />
@@ -198,7 +198,7 @@ export function PublicBookingForm({
             min={getTodayISODate()}
             value={fecha}
             onChange={(event) => setFecha(event.target.value)}
-            className="h-11 w-full rounded-lg border px-3 text-sm outline-none"
+            className="h-10 w-full rounded-lg border px-3 text-sm outline-none"
             style={inputStyle}
           />
         </label>
@@ -212,7 +212,7 @@ export function PublicBookingForm({
             type="time"
             value={horaInicio}
             onChange={(event) => setHoraInicio(event.target.value)}
-            className="h-11 w-full rounded-lg border px-3 text-sm outline-none"
+            className="h-10 w-full rounded-lg border px-3 text-sm outline-none"
             style={inputStyle}
           />
         </label>
@@ -227,7 +227,7 @@ export function PublicBookingForm({
             required
             value={servicioId}
             onChange={(event) => setServicioId(Number(event.target.value))}
-            className="h-11 w-full rounded-lg border px-3 text-sm outline-none"
+            className="h-10 w-full rounded-lg border px-3 text-sm outline-none"
             style={inputStyle}
           >
             {services.length === 0 ? <option value={0}>Sin servicios disponibles</option> : null}
@@ -246,7 +246,7 @@ export function PublicBookingForm({
           <select
             value={barberoId}
             onChange={(event) => setBarberoId(Number(event.target.value))}
-            className="h-11 w-full rounded-lg border px-3 text-sm outline-none"
+            className="h-10 w-full rounded-lg border px-3 text-sm outline-none"
             style={inputStyle}
           >
             {barbers.length === 0 ? <option value={0}>Primer barbero disponible</option> : null}
@@ -291,7 +291,7 @@ export function PublicBookingForm({
       <button
         type="submit"
         disabled={loading || services.length === 0}
-        className="inline-flex h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-extrabold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex h-10 w-full items-center justify-center rounded-lg px-4 text-sm font-extrabold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
         style={{ backgroundColor: primaryColor, color: primaryTextColor }}
       >
         {loading ? "Guardando..." : clean(submitLabel) || "Reservar cita"}
