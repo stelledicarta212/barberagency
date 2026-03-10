@@ -1,9 +1,14 @@
 "use client";
 
 import { Moon, SunMedium } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 
 type ThemeMode = "light" | "dark";
+
+type ThemeToggleProps = {
+  className?: string;
+  style?: CSSProperties;
+};
 
 function isThemeMode(value: string | null | undefined): value is ThemeMode {
   return value === "light" || value === "dark";
@@ -26,7 +31,7 @@ function getInitialTheme(): ThemeMode {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({ className, style }: ThemeToggleProps = {}) {
   const [theme, setTheme] = useState<ThemeMode>(getInitialTheme);
 
   useEffect(() => {
@@ -42,7 +47,8 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="inline-flex h-10 items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] px-3 py-2 text-xs font-semibold text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100"
+      className={`inline-flex h-10 items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface-muted)] px-3 py-2 text-xs font-semibold text-zinc-300 transition hover:border-zinc-600 hover:text-zinc-100 ${className ?? ""}`.trim()}
+      style={style}
       aria-label={theme === "dark" ? "Activar tema claro" : "Activar tema oscuro"}
       title={theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
     >

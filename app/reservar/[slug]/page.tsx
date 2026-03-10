@@ -14,6 +14,13 @@ type PageContext = {
   }>;
 };
 
+type ThemeMode = "light" | "dark";
+
+type FontPreset = {
+  heading: string;
+  body: string;
+};
+
 function clean(value: unknown) {
   return (value ?? "").toString().trim();
 }
@@ -53,6 +60,38 @@ function textOnBackground(hex: string) {
   return luminance(hex) > 0.62 ? "#0F172A" : "#F8FAFC";
 }
 
+function resolveThemeMode(mode: unknown, backgroundColor: string): ThemeMode {
+  const safeMode = clean(mode).toLowerCase();
+  if (safeMode === "light" || safeMode === "dark") return safeMode;
+  return luminance(backgroundColor) > 0.62 ? "light" : "dark";
+}
+
+function resolveFontPreset(fontPair: unknown): FontPreset {
+  const pair = clean(fontPair).toLowerCase();
+  if (pair.includes("oswald")) {
+    return {
+      heading: "\"Oswald\", \"Arial Narrow\", \"Segoe UI\", sans-serif",
+      body: "\"Inter\", \"Manrope\", \"Segoe UI\", sans-serif",
+    };
+  }
+  if (pair.includes("poppins")) {
+    return {
+      heading: "\"Poppins\", \"Sora\", \"Segoe UI\", sans-serif",
+      body: "\"Manrope\", \"Poppins\", \"Segoe UI\", sans-serif",
+    };
+  }
+  if (pair.includes("bebas")) {
+    return {
+      heading: "\"Bebas Neue\", \"Oswald\", \"Arial Narrow\", sans-serif",
+      body: "\"Montserrat\", \"Manrope\", \"Segoe UI\", sans-serif",
+    };
+  }
+  return {
+    heading: "\"Barlow\", \"Sora\", \"Segoe UI\", sans-serif",
+    body: "\"DM Sans\", \"Manrope\", \"Segoe UI\", sans-serif",
+  };
+}
+
 export default async function PublicBookingPage(context: PageContext) {
   const params = await context.params;
   const landing = await readPublicLandingContext(params.slug);
@@ -80,17 +119,32 @@ export default async function PublicBookingPage(context: PageContext) {
     "#FFFFFF",
   );
   const textColor = normalizeHexColor(branding?.palette.text ?? landing.theme.textColor, "#111827");
-  const themeMode = branding?.themeMode || (luminance(backgroundColor) > 0.62 ? "light" : "dark");
+  const themeMode = resolveThemeMode(branding?.themeMode, backgroundColor);
   const surfaceColor = normalizeHexColor(
     branding?.palette.surface,
     themeMode === "light" ? "#FFFFFF" : "#0F172A",
   );
-
-  const panelBackground = themeMode === "light" ? "#FFFFFF" : hexToRgba(surfaceColor, 0.9);
-  const panelMutedBackground = themeMode === "light" ? "#F4F7FC" : hexToRgba(surfaceColor, 0.72);
-  const panelBorderColor = hexToRgba(secondaryColor, themeMode === "light" ? 0.3 : 0.52);
-  const pageTextColor = themeMode === "light" ? "#0F172A" : textColor;
-  const pageSoftText = hexToRgba(pageTextColor, themeMode === "light" ? 0.72 : 0.82);
+  const isLight = themeMode === "light";
+  const pageTextColor = isLight ? normalizeHexColor(textColor, "#0F172A") : normalizeHexColor(textColor, "#E2E8F0");
+  const pageSoftText = hexToRgba(pageTextColor, isLight ? 0.72 : 0.84);
+  const panelBackground = isLight ? hexToRgba("#FFFFFF", 0.9) : hexToRgba(surfaceColor, 0.88);
+  const panelMutedBackground = isLight ? hexToRgba("#FFFFFF", 0.76) : hexToRgba(surfaceColor, 0.74);
+  const panelBorderColor = hexToRgba(secondaryColor, isLight ? 0.34 : 0.54);
+  const panelSoftBorderColor = hexToRgba(secondaryColor, isLight ? 0.2 : 0.3);
+  const secondaryButtonBackground = isLight
+    ? hexToRgba(secondaryColor, 0.18)
+    : hexToRgba("#020617", 0.42);
+  const secondaryButtonBorder = hexToRgba(secondaryColor, isLight ? 0.72 : 0.66);
+  const secondaryButtonText = isLight ? pageTextColor : "#F8FAFC";
+  const chipBackground = isLight ? hexToRgba(secondaryColor, 0.18) : hexToRgba(primaryColor, 0.56);
+  const chipBorder = hexToRgba(secondaryColor, isLight ? 0.62 : 0.74);
+  const chipText = isLight ? pageTextColor : textOnBackground(primaryColor);
+  const statsBackground = isLight ? hexToRgba("#FFFFFF", 0.72) : hexToRgba("#020617", 0.44);
+  const statsBorder = isLight ? panelSoftBorderColor : hexToRgba("#FFFFFF", 0.24);
+  const statsText = isLight ? pageTextColor : "#F8FAFC";
+  const statsLabel = isLight ? hexToRgba(pageTextColor, 0.72) : hexToRgba("#F8FAFC", 0.72);
+  const publicFontPair = clean(branding?.fontPair);
+  const fonts = resolveFontPreset(publicFontPair);
   const primaryTextColor = textOnBackground(primaryColor);
   const secondaryTextColor = textOnBackground(secondaryColor);
 
@@ -120,20 +174,20 @@ export default async function PublicBookingPage(context: PageContext) {
     .map((item) => clean(item))
     .filter(Boolean);
 
-  const heroOverlay =
-    themeMode === "light"
-      ? `linear-gradient(108deg, ${hexToRgba("#FFFFFF", 0.78)} 0%, ${hexToRgba(backgroundColor, 0.58)} 35%, ${hexToRgba("#0F172A", 0.56)} 100%)`
-      : `linear-gradient(110deg, ${hexToRgba("#020617", 0.28)} 0%, ${hexToRgba("#020617", 0.58)} 42%, ${hexToRgba("#020617", 0.86)} 100%)`;
+  const heroOverlay = isLight
+    ? `linear-gradient(108deg, ${hexToRgba("#FFFFFF", 0.72)} 0%, ${hexToRgba(backgroundColor, 0.52)} 32%, ${hexToRgba(primaryColor, 0.7)} 100%)`
+    : `linear-gradient(110deg, ${hexToRgba("#020617", 0.3)} 0%, ${hexToRgba("#020617", 0.6)} 42%, ${hexToRgba("#020617", 0.88)} 100%)`;
 
   return (
     <main
       className="min-h-screen px-0 pb-8"
       style={{
         color: pageTextColor,
+        fontFamily: fonts.body,
         backgroundImage: `
-          radial-gradient(circle at 10% 14%, ${hexToRgba(primaryColor, 0.2)} 0%, transparent 35%),
-          radial-gradient(circle at 90% 0%, ${hexToRgba(secondaryColor, 0.16)} 0%, transparent 32%),
-          linear-gradient(180deg, ${hexToRgba(backgroundColor, 0.92)} 0%, ${backgroundColor} 100%)
+          radial-gradient(circle at 10% 14%, ${hexToRgba(primaryColor, isLight ? 0.15 : 0.22)} 0%, transparent 36%),
+          radial-gradient(circle at 90% 0%, ${hexToRgba(secondaryColor, isLight ? 0.16 : 0.2)} 0%, transparent 32%),
+          linear-gradient(180deg, ${hexToRgba(backgroundColor, isLight ? 0.96 : 0.9)} 0%, ${backgroundColor} 100%)
         `,
       }}
     >
@@ -156,16 +210,22 @@ export default async function PublicBookingPage(context: PageContext) {
                   src={logoImage}
                   alt={landing.profile.nombrePublico}
                   className="size-14 rounded-xl border bg-white/85 object-cover p-1 sm:size-16"
-                  style={{ borderColor: hexToRgba(secondaryColor, 0.72) }}
+                  style={{
+                    borderColor: hexToRgba(secondaryColor, 0.72),
+                    backgroundColor: isLight ? hexToRgba("#FFFFFF", 0.92) : hexToRgba("#FFFFFF", 0.84),
+                  }}
                 />
                 <div>
                   <p
                     className="text-xs font-semibold uppercase tracking-[0.2em]"
-                    style={{ color: hexToRgba("#F8FAFC", 0.95) }}
+                    style={{ color: hexToRgba("#F8FAFC", 0.95), fontFamily: fonts.body }}
                   >
                     {heroBadge}
                   </p>
-                  <h1 className="text-3xl font-black leading-none sm:text-4xl" style={{ color: "#F8FAFC" }}>
+                  <h1
+                    className="text-3xl font-black leading-none sm:text-4xl"
+                    style={{ color: "#F8FAFC", fontFamily: fonts.heading }}
+                  >
                     {landing.profile.nombrePublico}
                   </h1>
                 </div>
@@ -176,14 +236,23 @@ export default async function PublicBookingPage(context: PageContext) {
                   href={publicUrl}
                   className="inline-flex rounded-lg border px-3 py-2 text-xs font-semibold transition hover:opacity-90"
                   style={{
-                    borderColor: hexToRgba(secondaryColor, 0.75),
-                    backgroundColor: hexToRgba("#020617", 0.45),
-                    color: "#F8FAFC",
+                    borderColor: secondaryButtonBorder,
+                    backgroundColor: secondaryButtonBackground,
+                    color: secondaryButtonText,
+                    fontFamily: fonts.body,
                   }}
                 >
                   Compartir URL
                 </a>
-                <ThemeToggle />
+                <ThemeToggle
+                  className="text-xs font-semibold"
+                  style={{
+                    borderColor: secondaryButtonBorder,
+                    backgroundColor: secondaryButtonBackground,
+                    color: secondaryButtonText,
+                    fontFamily: fonts.body,
+                  }}
+                />
               </div>
             </header>
 
@@ -193,9 +262,10 @@ export default async function PublicBookingPage(context: PageContext) {
                   key={`${item}-${index}`}
                   className="rounded-full border px-3 py-1 text-xs font-semibold"
                   style={{
-                    borderColor: hexToRgba("#FFFFFF", 0.24),
-                    backgroundColor: hexToRgba("#020617", 0.38),
-                    color: "#F8FAFC",
+                    borderColor: chipBorder,
+                    backgroundColor: chipBackground,
+                    color: chipText,
+                    fontFamily: fonts.body,
                   }}
                 >
                   {item}
@@ -205,10 +275,16 @@ export default async function PublicBookingPage(context: PageContext) {
 
             <div className="mt-auto grid gap-4 pb-2 lg:grid-cols-[1.1fr_0.9fr]">
               <div className="space-y-3">
-                <h2 className="max-w-3xl text-4xl font-black leading-tight sm:text-5xl" style={{ color: "#F8FAFC" }}>
+                <h2
+                  className="max-w-3xl text-4xl font-black leading-tight sm:text-5xl"
+                  style={{ color: "#F8FAFC", fontFamily: fonts.heading }}
+                >
                   {heroTitle}
                 </h2>
-                <p className="max-w-2xl text-base sm:text-lg" style={{ color: hexToRgba("#F8FAFC", 0.88) }}>
+                <p
+                  className="max-w-2xl text-base sm:text-lg"
+                  style={{ color: hexToRgba("#F8FAFC", 0.9), fontFamily: fonts.body }}
+                >
                   {heroSubtitle}
                 </p>
 
@@ -218,9 +294,10 @@ export default async function PublicBookingPage(context: PageContext) {
                       key={`${service.id}-${service.nombre}`}
                       className="rounded-full border px-3 py-1 text-xs font-semibold"
                       style={{
-                        borderColor: hexToRgba(secondaryColor, 0.75),
-                        backgroundColor: hexToRgba(primaryColor, 0.56),
-                        color: primaryTextColor,
+                        borderColor: chipBorder,
+                        backgroundColor: chipBackground,
+                        color: chipText,
+                        fontFamily: fonts.body,
                       }}
                     >
                       {service.nombre} ({service.duracionMin} min)
@@ -232,38 +309,44 @@ export default async function PublicBookingPage(context: PageContext) {
                   <div
                     className="rounded-xl border px-3 py-2"
                     style={{
-                      borderColor: hexToRgba("#FFFFFF", 0.24),
-                      backgroundColor: hexToRgba("#020617", 0.44),
+                      borderColor: statsBorder,
+                      backgroundColor: statsBackground,
                     }}
                   >
-                    <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: hexToRgba("#F8FAFC", 0.72) }}>
+                    <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: statsLabel, fontFamily: fonts.body }}>
                       Servicios
                     </p>
-                    <p className="mt-1 text-2xl font-black text-white">{landing.services.length}</p>
+                    <p className="mt-1 text-2xl font-black" style={{ color: statsText, fontFamily: fonts.heading }}>
+                      {landing.services.length}
+                    </p>
                   </div>
                   <div
                     className="rounded-xl border px-3 py-2"
                     style={{
-                      borderColor: hexToRgba("#FFFFFF", 0.24),
-                      backgroundColor: hexToRgba("#020617", 0.44),
+                      borderColor: statsBorder,
+                      backgroundColor: statsBackground,
                     }}
                   >
-                    <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: hexToRgba("#F8FAFC", 0.72) }}>
+                    <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: statsLabel, fontFamily: fonts.body }}>
                       Barberos
                     </p>
-                    <p className="mt-1 text-2xl font-black text-white">{landing.barbers.length}</p>
+                    <p className="mt-1 text-2xl font-black" style={{ color: statsText, fontFamily: fonts.heading }}>
+                      {landing.barbers.length}
+                    </p>
                   </div>
                   <div
                     className="rounded-xl border px-3 py-2"
                     style={{
-                      borderColor: hexToRgba("#FFFFFF", 0.24),
-                      backgroundColor: hexToRgba("#020617", 0.44),
+                      borderColor: statsBorder,
+                      backgroundColor: statsBackground,
                     }}
                   >
-                    <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: hexToRgba("#F8FAFC", 0.72) }}>
+                    <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: statsLabel, fontFamily: fonts.body }}>
                       URL
                     </p>
-                    <p className="mt-1 truncate text-sm font-semibold text-white">/{landing.profile.slug}</p>
+                    <p className="mt-1 truncate text-sm font-semibold" style={{ color: statsText, fontFamily: fonts.body }}>
+                      /{landing.profile.slug}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -272,14 +355,16 @@ export default async function PublicBookingPage(context: PageContext) {
                 className="rounded-2xl border p-4 shadow-xl"
                 style={{
                   borderColor: panelBorderColor,
-                  backgroundColor: hexToRgba(surfaceColor, themeMode === "light" ? 0.92 : 0.82),
-                  boxShadow: `0 10px 26px ${hexToRgba("#020617", themeMode === "light" ? 0.12 : 0.5)}`,
+                  backgroundColor: panelBackground,
+                  boxShadow: `0 10px 26px ${hexToRgba("#020617", isLight ? 0.14 : 0.5)}`,
                 }}
               >
                 <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: pageSoftText }}>
                   Formulario global
                 </p>
-                <h3 className="mt-1 text-3xl font-black">{bookingTitle}</h3>
+                <h3 className="mt-1 text-3xl font-black" style={{ fontFamily: fonts.heading }}>
+                  {bookingTitle}
+                </h3>
                 <p className="mt-1 text-sm" style={{ color: pageSoftText }}>
                   {bookingSubtitle}
                 </p>
@@ -295,10 +380,11 @@ export default async function PublicBookingPage(context: PageContext) {
                     }))}
                     barbers={landing.barbers}
                     primaryColor={primaryColor}
-                    backgroundColor={themeMode === "light" ? "#FFFFFF" : "#0B1220"}
-                    textColor={themeMode === "light" ? "#0F172A" : "#E2E8F0"}
+                    backgroundColor={panelMutedBackground}
+                    textColor={pageTextColor}
                     borderColor={panelBorderColor}
                     submitLabel={ctaLabel}
+                    fontFamily={fonts.body}
                   />
                 </div>
               </aside>
@@ -312,7 +398,10 @@ export default async function PublicBookingPage(context: PageContext) {
           className="rounded-2xl border p-4"
           style={{ borderColor: panelBorderColor, backgroundColor: panelBackground }}
         >
-          <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: pageSoftText }}>
+          <p
+            className="text-xs font-semibold uppercase tracking-[0.2em]"
+            style={{ color: pageSoftText, fontFamily: fonts.body }}
+          >
             Servicios disponibles
           </p>
           <div className="mt-3 space-y-2">
@@ -326,11 +415,13 @@ export default async function PublicBookingPage(context: PageContext) {
                   key={service.id}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
                   style={{
-                    borderColor: panelBorderColor,
+                    borderColor: panelSoftBorderColor,
                     backgroundColor: panelMutedBackground,
                   }}
                 >
-                  <span className="font-semibold">{service.nombre}</span>
+                  <span className="font-semibold" style={{ fontFamily: fonts.heading }}>
+                    {service.nombre}
+                  </span>
                   <span className="text-xs sm:text-sm">
                     {service.duracionMin} min | {formatMoneyCOP(service.precio)}
                   </span>
@@ -344,7 +435,10 @@ export default async function PublicBookingPage(context: PageContext) {
           className="rounded-2xl border p-4"
           style={{ borderColor: panelBorderColor, backgroundColor: panelBackground }}
         >
-          <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: pageSoftText }}>
+          <p
+            className="text-xs font-semibold uppercase tracking-[0.2em]"
+            style={{ color: pageSoftText, fontFamily: fonts.body }}
+          >
             Contacto y politicas
           </p>
           <div className="mt-3 space-y-2 text-sm">
@@ -374,7 +468,10 @@ export default async function PublicBookingPage(context: PageContext) {
           className="rounded-2xl border p-4"
           style={{ borderColor: panelBorderColor, backgroundColor: panelBackground }}
         >
-          <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: pageSoftText }}>
+          <p
+            className="text-xs font-semibold uppercase tracking-[0.2em]"
+            style={{ color: pageSoftText, fontFamily: fonts.body }}
+          >
             QR de reservas
           </p>
           <div className="mt-3 flex flex-col items-center gap-3">
@@ -387,7 +484,11 @@ export default async function PublicBookingPage(context: PageContext) {
             <a
               href={publicUrl}
               className="w-full rounded-lg px-3 py-2 text-center text-sm font-bold transition hover:opacity-90"
-              style={{ backgroundColor: secondaryColor, color: secondaryTextColor }}
+              style={{
+                backgroundColor: secondaryColor,
+                color: secondaryTextColor,
+                fontFamily: fonts.heading,
+              }}
             >
               Abrir landing
             </a>
@@ -402,7 +503,9 @@ export default async function PublicBookingPage(context: PageContext) {
         >
           <img src={secondaryImage} alt="Imagen secundaria barberia" className="h-56 w-full object-cover" />
           <div className="p-4">
-            <p className="text-sm font-black">Experiencia y ambiente</p>
+            <p className="text-sm font-black" style={{ fontFamily: fonts.heading }}>
+              Experiencia y ambiente
+            </p>
             <p className="mt-1 text-sm" style={{ color: pageSoftText }}>
               Diseno profesional con reservas online para convertir visitas en citas reales.
             </p>
@@ -415,7 +518,9 @@ export default async function PublicBookingPage(context: PageContext) {
         >
           <img src={tertiaryImage} alt="Imagen terciaria barberia" className="h-56 w-full object-cover" />
           <div className="p-4">
-            <p className="text-sm font-black">Equipo listo para atender</p>
+            <p className="text-sm font-black" style={{ fontFamily: fonts.heading }}>
+              Equipo listo para atender
+            </p>
             <p className="mt-1 text-sm" style={{ color: pageSoftText }}>
               {landing.barbers.length > 0
                 ? landing.barbers.map((barber) => barber.nombre).join(" | ")
@@ -425,11 +530,19 @@ export default async function PublicBookingPage(context: PageContext) {
               <a
                 href={publicUrl}
                 className="rounded-lg px-3 py-2 text-xs font-bold"
-                style={{ backgroundColor: primaryColor, color: primaryTextColor }}
+                style={{ backgroundColor: primaryColor, color: primaryTextColor, fontFamily: fonts.heading }}
               >
                 {ctaLabel}
               </a>
-              <span className="rounded-lg border px-3 py-2 text-xs" style={{ borderColor: panelBorderColor }}>
+              <span
+                className="rounded-lg border px-3 py-2 text-xs"
+                style={{
+                  borderColor: panelSoftBorderColor,
+                  backgroundColor: panelMutedBackground,
+                  color: pageSoftText,
+                  fontFamily: fonts.body,
+                }}
+              >
                 Moneda: {landing.profile.moneda || "COP"}
               </span>
             </div>

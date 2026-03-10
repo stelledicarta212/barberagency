@@ -28,6 +28,7 @@ type Props = {
   textColor?: string;
   borderColor?: string;
   submitLabel?: string;
+  fontFamily?: string;
 };
 
 function clean(value: unknown) {
@@ -82,6 +83,7 @@ export function PublicBookingForm({
   textColor,
   borderColor,
   submitLabel,
+  fontFamily,
 }: Props) {
   const [clienteNombre, setClienteNombre] = useState("");
   const [clienteTel, setClienteTel] = useState("");
@@ -154,7 +156,7 @@ export function PublicBookingForm({
   }
 
   return (
-    <form className="space-y-3" onSubmit={onSubmit}>
+    <form className="space-y-3" onSubmit={onSubmit} style={fontFamily ? { fontFamily } : undefined}>
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="block text-sm">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide opacity-75">
