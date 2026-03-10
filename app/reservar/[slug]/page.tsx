@@ -111,26 +111,29 @@ export default async function PublicBookingPage(context: PageContext) {
 
   const branding = landing.branding;
   const primaryColor = normalizeHexColor(
-    branding?.palette.primary ?? landing.theme.primaryColor,
+    clean(landing.theme.primaryColor) || clean(branding?.palette.primary),
     "#111827",
   );
   const secondaryColor = normalizeHexColor(
-    branding?.palette.secondary ?? landing.theme.secondaryColor,
+    clean(landing.theme.secondaryColor) || clean(branding?.palette.secondary),
     "#F59E0B",
   );
   const backgroundColor = normalizeHexColor(
-    branding?.palette.background ?? landing.theme.backgroundColor,
+    clean(landing.theme.backgroundColor) || clean(branding?.palette.background),
     "#FFFFFF",
   );
-  const textColor = normalizeHexColor(branding?.palette.text ?? landing.theme.textColor, "#111827");
+  const textColor = normalizeHexColor(
+    clean(landing.theme.textColor) || clean(branding?.palette.text),
+    "#111827",
+  );
   const themeMode = resolveThemeMode(forcedTheme || branding?.themeMode, backgroundColor);
   const surfaceColor = normalizeHexColor(
     branding?.palette.surface,
     themeMode === "light" ? "#FFFFFF" : "#0F172A",
   );
   const isLight = themeMode === "light";
-  const pageTextColor = isLight ? normalizeHexColor(textColor, "#0F172A") : normalizeHexColor(textColor, "#E2E8F0");
-  const pageSoftText = hexToRgba(pageTextColor, isLight ? 0.72 : 0.84);
+  const pageTextColor = isLight ? "#0F172A" : normalizeHexColor(textColor, "#E2E8F0");
+  const pageSoftText = hexToRgba(pageTextColor, isLight ? 0.76 : 0.84);
   const panelBackground = isLight ? hexToRgba("#FFFFFF", 0.9) : hexToRgba(surfaceColor, 0.88);
   const panelMutedBackground = isLight ? hexToRgba("#FFFFFF", 0.76) : hexToRgba(surfaceColor, 0.74);
   const panelBorderColor = hexToRgba(secondaryColor, isLight ? 0.34 : 0.54);
@@ -147,6 +150,9 @@ export default async function PublicBookingPage(context: PageContext) {
   const statsBorder = isLight ? panelSoftBorderColor : hexToRgba("#FFFFFF", 0.24);
   const statsText = isLight ? pageTextColor : "#F8FAFC";
   const statsLabel = isLight ? hexToRgba(pageTextColor, 0.72) : hexToRgba("#F8FAFC", 0.72);
+  const heroHeadingColor = isLight ? "#0F172A" : "#F8FAFC";
+  const heroBodyColor = isLight ? hexToRgba("#0F172A", 0.88) : hexToRgba("#F8FAFC", 0.9);
+  const heroBadgeColor = isLight ? hexToRgba("#0F172A", 0.82) : hexToRgba("#F8FAFC", 0.95);
   const publicFontPair = clean(branding?.fontPair);
   const fonts = resolveFontPreset(publicFontPair);
   const primaryTextColor = textOnBackground(primaryColor);
@@ -179,7 +185,7 @@ export default async function PublicBookingPage(context: PageContext) {
     .filter(Boolean);
 
   const heroOverlay = isLight
-    ? `linear-gradient(108deg, ${hexToRgba("#FFFFFF", 0.72)} 0%, ${hexToRgba(backgroundColor, 0.52)} 32%, ${hexToRgba(primaryColor, 0.7)} 100%)`
+    ? `linear-gradient(108deg, ${hexToRgba("#FFFFFF", 0.74)} 0%, ${hexToRgba(backgroundColor, 0.54)} 34%, ${hexToRgba(primaryColor, 0.36)} 100%)`
     : `linear-gradient(110deg, ${hexToRgba("#020617", 0.3)} 0%, ${hexToRgba("#020617", 0.6)} 42%, ${hexToRgba("#020617", 0.88)} 100%)`;
 
   return (
@@ -222,13 +228,13 @@ export default async function PublicBookingPage(context: PageContext) {
                 <div>
                   <p
                     className="text-xs font-semibold uppercase tracking-[0.2em]"
-                    style={{ color: hexToRgba("#F8FAFC", 0.95), fontFamily: fonts.body }}
+                    style={{ color: heroBadgeColor, fontFamily: fonts.body }}
                   >
                     {heroBadge}
                   </p>
                   <h1
                     className="text-3xl font-black leading-none sm:text-4xl"
-                    style={{ color: "#F8FAFC", fontFamily: fonts.heading }}
+                    style={{ color: heroHeadingColor, fontFamily: fonts.heading }}
                   >
                     {landing.profile.nombrePublico}
                   </h1>
@@ -282,13 +288,13 @@ export default async function PublicBookingPage(context: PageContext) {
               <div className="space-y-3">
                 <h2
                   className="max-w-3xl text-4xl font-black leading-tight sm:text-5xl"
-                  style={{ color: "#F8FAFC", fontFamily: fonts.heading }}
+                  style={{ color: heroHeadingColor, fontFamily: fonts.heading }}
                 >
                   {heroTitle}
                 </h2>
                 <p
                   className="max-w-2xl text-base sm:text-lg"
-                  style={{ color: hexToRgba("#F8FAFC", 0.9), fontFamily: fonts.body }}
+                  style={{ color: heroBodyColor, fontFamily: fonts.body }}
                 >
                   {heroSubtitle}
                 </p>
