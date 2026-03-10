@@ -87,9 +87,9 @@ export default async function PublicBookingPage(context: PageContext) {
         `,
       }}
     >
-      <section className="mx-auto w-full max-w-6xl">
+      <section className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
         <article
-          className="relative overflow-hidden rounded-3xl border shadow-2xl"
+          className="relative h-[500px] overflow-hidden border-y shadow-2xl"
           style={{
             borderColor: hexToRgba(primaryColor, 0.45),
             backgroundColor: "var(--surface)",
@@ -98,7 +98,7 @@ export default async function PublicBookingPage(context: PageContext) {
           <img
             src={heroImage}
             alt={`Portada ${landing.profile.nombrePublico}`}
-            className="h-[420px] w-full object-cover object-center sm:h-[460px] lg:h-[500px]"
+            className="h-full w-full object-cover object-center"
           />
           <div
             className="absolute inset-0"
@@ -107,7 +107,7 @@ export default async function PublicBookingPage(context: PageContext) {
             }}
           />
 
-          <div className="absolute inset-0 z-10 flex flex-col justify-between p-5 sm:p-7">
+          <div className="absolute inset-0 z-10 mx-auto flex h-full w-full max-w-6xl flex-col justify-between px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 <img
