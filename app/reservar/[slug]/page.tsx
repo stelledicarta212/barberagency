@@ -60,6 +60,11 @@ function textOnBackground(hex: string) {
   return luminance(hex) > 0.62 ? "#0F172A" : "#F8FAFC";
 }
 
+function hasReasonableContrast(backgroundHex: string, foregroundHex: string) {
+  const diff = Math.abs(luminance(backgroundHex) - luminance(foregroundHex));
+  return diff >= 0.45;
+}
+
 function resolveThemeMode(mode: unknown, backgroundColor: string): ThemeMode {
   const safeMode = clean(mode).toLowerCase();
   if (safeMode === "light" || safeMode === "dark") return safeMode;
@@ -111,19 +116,19 @@ export default async function PublicBookingPage(context: PageContext) {
 
   const branding = landing.branding;
   const primaryColor = normalizeHexColor(
-    clean(landing.theme.primaryColor) || clean(branding?.palette.primary),
-    "#111827",
+    clean(branding?.palette.primary) || clean(landing.theme.primaryColor),
+    "#DC2626",
   );
   const secondaryColor = normalizeHexColor(
-    clean(landing.theme.secondaryColor) || clean(branding?.palette.secondary),
+    clean(branding?.palette.secondary) || clean(landing.theme.secondaryColor),
     "#F59E0B",
   );
   const backgroundColor = normalizeHexColor(
-    clean(landing.theme.backgroundColor) || clean(branding?.palette.background),
+    clean(branding?.palette.background) || clean(landing.theme.backgroundColor),
     "#FFFFFF",
   );
-  const textColor = normalizeHexColor(
-    clean(landing.theme.textColor) || clean(branding?.palette.text),
+  const desiredTextColor = normalizeHexColor(
+    clean(branding?.palette.text) || clean(landing.theme.textColor),
     "#111827",
   );
   const themeMode = resolveThemeMode(forcedTheme || branding?.themeMode, backgroundColor);
@@ -132,7 +137,10 @@ export default async function PublicBookingPage(context: PageContext) {
     themeMode === "light" ? "#FFFFFF" : "#0F172A",
   );
   const isLight = themeMode === "light";
-  const pageTextColor = isLight ? "#0F172A" : normalizeHexColor(textColor, "#E2E8F0");
+  const fallbackTextColor = isLight ? "#0F172A" : "#F8FAFC";
+  const pageTextColor = hasReasonableContrast(backgroundColor, desiredTextColor)
+    ? desiredTextColor
+    : fallbackTextColor;
   const pageSoftText = hexToRgba(pageTextColor, isLight ? 0.76 : 0.84);
   const panelBackground = isLight ? hexToRgba("#FFFFFF", 0.9) : hexToRgba(surfaceColor, 0.88);
   const panelMutedBackground = isLight ? hexToRgba("#FFFFFF", 0.76) : hexToRgba(surfaceColor, 0.74);

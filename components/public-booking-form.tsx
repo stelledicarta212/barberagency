@@ -80,6 +80,14 @@ function textOnBackground(hex: string) {
   return luminance(hex) > 0.62 ? "#0F172A" : "#F8FAFC";
 }
 
+function hexToRgba(hex: string, alpha: number) {
+  const safeHex = normalizeHexColor(hex, "#000000").replace("#", "");
+  const r = Number.parseInt(safeHex.slice(0, 2), 16);
+  const g = Number.parseInt(safeHex.slice(2, 4), 16);
+  const b = Number.parseInt(safeHex.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${Math.min(Math.max(alpha, 0), 1)})`;
+}
+
 function getTodayISODate() {
   const now = new Date();
   const year = now.getFullYear();
@@ -124,6 +132,8 @@ export function PublicBookingForm({
     backgroundColor: inputBackgroundColor,
     color: inputTextColor,
   } as const;
+  const bookingDisabled = services.length === 0;
+  const buttonBackground = bookingDisabled ? hexToRgba(primaryColor, 0.78) : primaryColor;
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -305,9 +315,9 @@ export function PublicBookingForm({
 
       <button
         type="submit"
-        disabled={loading || services.length === 0}
-        className="inline-flex h-10 w-full items-center justify-center rounded-lg px-4 text-sm font-extrabold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
-        style={{ backgroundColor: primaryColor, color: primaryTextColor }}
+        disabled={loading || bookingDisabled}
+        className="inline-flex h-10 w-full items-center justify-center rounded-lg px-4 text-sm font-extrabold text-white transition disabled:cursor-not-allowed"
+        style={{ backgroundColor: buttonBackground, color: primaryTextColor }}
       >
         {loading ? "Guardando..." : clean(submitLabel) || "Reservar cita"}
       </button>
