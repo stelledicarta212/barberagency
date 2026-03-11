@@ -9,6 +9,9 @@ import {
 import { AdminOnly } from "@/components/session-role-gate";
 import { getDashboardSnapshot } from "@/lib/saas-live";
 
+const REGISTER_BARBERIA_URL =
+  "https://barberagency-barberagency.gymh5g.easypanel.host/registro-barberias/";
+
 export default async function DashboardPage() {
   const { metrics, upcoming, source } = await getDashboardSnapshot();
 
@@ -46,13 +49,13 @@ export default async function DashboardPage() {
         </div>
         <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
           <AdminOnly>
-            <Link
-              href="/barberia"
+            <a
+              href={REGISTER_BARBERIA_URL}
               className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-bold text-white transition hover:bg-[var(--accent-strong)]"
             >
               <Building2 className="size-4" />
               Configurar mi barberia
-            </Link>
+            </a>
           </AdminOnly>
           <AdminOnly
             fallback={
@@ -89,13 +92,13 @@ export default async function DashboardPage() {
               </span>
             }
           >
-            <Link
-              href="/barberia"
+            <a
+              href={REGISTER_BARBERIA_URL}
               className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2 text-xs font-black uppercase tracking-wide text-white transition hover:bg-[var(--accent-strong)]"
             >
               Ir a mi barberia
               <ArrowRight className="size-4" />
-            </Link>
+            </a>
           </AdminOnly>
         </div>
       </article>
