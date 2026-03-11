@@ -47,6 +47,17 @@ function formatMoneyCOP(value: number) {
   }).format(Math.max(0, Number(value || 0)));
 }
 
+function phoneDigits(value: unknown) {
+  return clean(value).replace(/\D+/g, "");
+}
+
+function buildWhatsAppUrl(phone: unknown, businessName: string) {
+  const digits = phoneDigits(phone);
+  if (!digits) return "";
+  const text = `Hola ${businessName}, quiero reservar una cita.`;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+}
+
 function luminance(hex: string) {
   const value = clean(hex).replace("#", "");
   if (value.length !== 6) return 0;
@@ -179,9 +190,10 @@ export default async function PublicBookingPage(context: PageContext) {
   const qrUrl = buildQrImageUrl(publicUrl);
   const heroImage =
     clean(branding?.heroImageUrl) || landing.profile.coverUrl || "/Fondoiniciodshb.jpg";
-  const secondaryImage = clean(branding?.secondaryImageUrl) || heroImage;
-  const tertiaryImage = clean(branding?.tertiaryImageUrl) || "/welcome-card-image.png";
   const logoImage = landing.profile.logoUrl || "/welcome-card-image.png";
+  const whatsAppSource = clean(landing.profile.whatsapp) || clean(landing.profile.telefono);
+  const whatsAppUrl = buildWhatsAppUrl(whatsAppSource, landing.profile.nombrePublico);
+  const whatsAppDisplay = phoneDigits(whatsAppSource);
 
   const heroBadge = clean(branding?.heroBadge) || "RESERVA ONLINE";
   const heroTitle =
@@ -271,6 +283,22 @@ export default async function PublicBookingPage(context: PageContext) {
                 >
                   Compartir URL
                 </a>
+                {whatsAppUrl ? (
+                  <a
+                    href={whatsAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex rounded-lg border px-3 py-2 text-xs font-semibold transition hover:opacity-90"
+                    style={{
+                      borderColor: hexToRgba("#22C55E", isLight ? 0.68 : 0.78),
+                      backgroundColor: hexToRgba("#16A34A", isLight ? 0.16 : 0.32),
+                      color: isLight ? "#14532D" : "#ECFDF3",
+                      fontFamily: fonts.body,
+                    }}
+                  >
+                    WhatsApp
+                  </a>
+                ) : null}
                 <PublicThemeToggle
                   initialTheme={themeMode}
                   className="text-xs font-semibold"
@@ -480,7 +508,7 @@ export default async function PublicBookingPage(context: PageContext) {
             className="text-xs font-semibold uppercase tracking-[0.2em]"
             style={{ color: pageSoftText, fontFamily: fonts.body }}
           >
-            Contacto y politicas
+            Contacto rapido
           </p>
           <div className="mt-3 space-y-2 text-sm">
             {landing.profile.telefono ? <p>Telefono: {landing.profile.telefono}</p> : null}
@@ -489,9 +517,7 @@ export default async function PublicBookingPage(context: PageContext) {
             {landing.profile.emailContacto ? <p>Email: {landing.profile.emailContacto}</p> : null}
             {landing.profile.instagram ? <p>Instagram: @{landing.profile.instagram}</p> : null}
             {landing.profile.tiktok ? <p>TikTok: @{landing.profile.tiktok}</p> : null}
-            {landing.profile.politicas ? (
-              <p style={{ color: pageSoftText }}>{landing.profile.politicas}</p>
-            ) : benefitList.length > 0 ? (
+            {benefitList.length > 0 ? (
               <ul className="list-disc space-y-1 pl-5" style={{ color: pageSoftText }}>
                 {benefitList.map((benefit, index) => (
                   <li key={`${benefit}-${index}`}>{benefit}</li>
@@ -499,10 +525,29 @@ export default async function PublicBookingPage(context: PageContext) {
               </ul>
             ) : (
               <p style={{ color: pageSoftText }}>
-                Reserva sujeta a disponibilidad real de barberos y horarios.
+                Agenda sujeta a disponibilidad real de barberos y horarios.
               </p>
             )}
           </div>
+          {whatsAppUrl ? (
+            <a
+              href={whatsAppUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm font-bold transition hover:opacity-90"
+              style={{
+                backgroundColor: "#25D366",
+                color: "#052E16",
+                fontFamily: fonts.heading,
+              }}
+            >
+              Escribir por WhatsApp
+            </a>
+          ) : (
+            <p className="mt-3 text-xs" style={{ color: pageSoftText }}>
+              Configura telefono o WhatsApp en tu perfil para activar este boton.
+            </p>
+          )}
         </article>
 
         <article
@@ -543,62 +588,103 @@ export default async function PublicBookingPage(context: PageContext) {
 
       <section className="mx-auto mt-4 grid w-full max-w-7xl gap-4 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
         <article
-          className="overflow-hidden rounded-2xl border"
+          className="rounded-2xl border p-4"
           style={{
             borderColor: panelBorderColor,
             backgroundColor: panelBackground,
             color: panelTextColor,
           }}
         >
-          <img src={secondaryImage} alt="Imagen secundaria barberia" className="h-56 w-full object-cover" />
-          <div className="p-4">
-            <p className="text-sm font-black" style={{ fontFamily: fonts.heading }}>
-              Experiencia y ambiente
-            </p>
-            <p className="mt-1 text-sm" style={{ color: pageSoftText }}>
-              Diseno profesional con reservas online para convertir visitas en citas reales.
-            </p>
+          <p
+            className="text-xs font-semibold uppercase tracking-[0.2em]"
+            style={{ color: pageSoftText, fontFamily: fonts.body }}
+          >
+            Equipo disponible
+          </p>
+          <div className="mt-3 space-y-2">
+            {landing.barbers.length === 0 ? (
+              <p className="text-sm" style={{ color: pageSoftText }}>
+                Aun no hay barberos publicados para reservas online.
+              </p>
+            ) : (
+              landing.barbers.map((barber) => (
+                <div
+                  key={barber.id}
+                  className="rounded-lg border px-3 py-2"
+                  style={{
+                    borderColor: panelSoftBorderColor,
+                    backgroundColor: panelMutedBackground,
+                  }}
+                >
+                  <p className="text-sm font-bold" style={{ fontFamily: fonts.heading }}>
+                    {barber.nombre}
+                  </p>
+                  <p className="text-xs" style={{ color: pageSoftText }}>
+                    Barbero profesional
+                  </p>
+                </div>
+              ))
+            )}
           </div>
         </article>
 
         <article
-          className="overflow-hidden rounded-2xl border"
+          className="rounded-2xl border p-4"
           style={{
             borderColor: panelBorderColor,
             backgroundColor: panelBackground,
             color: panelTextColor,
           }}
         >
-          <img src={tertiaryImage} alt="Imagen terciaria barberia" className="h-56 w-full object-cover" />
-          <div className="p-4">
-            <p className="text-sm font-black" style={{ fontFamily: fonts.heading }}>
-              Equipo listo para atender
+          <p
+            className="text-xs font-semibold uppercase tracking-[0.2em]"
+            style={{ color: pageSoftText, fontFamily: fonts.body }}
+          >
+            Reserva directa
+          </p>
+          <p className="mt-2 text-sm" style={{ color: pageSoftText }}>
+            Comparte este enlace o agenda por WhatsApp para convertir visitas en citas.
+          </p>
+
+          <div className="mt-3 rounded-lg border p-3 text-sm" style={{ borderColor: panelSoftBorderColor }}>
+            <p className="font-semibold" style={{ fontFamily: fonts.heading }}>
+              URL publica
             </p>
-            <p className="mt-1 text-sm" style={{ color: pageSoftText }}>
-              {landing.barbers.length > 0
-                ? landing.barbers.map((barber) => barber.nombre).join(" | ")
-                : "Pronto publicaremos el equipo completo de barberos."}
+            <p className="mt-1 break-all" style={{ color: pageSoftText }}>
+              {publicUrl}
             </p>
-            <div className="mt-3 flex flex-wrap gap-2">
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <a
+              href={publicUrl}
+              className="rounded-lg px-3 py-2 text-xs font-bold"
+              style={{ backgroundColor: ctaColor, color: primaryTextColor, fontFamily: fonts.heading }}
+            >
+              {ctaLabel}
+            </a>
+            {whatsAppUrl ? (
               <a
-                href={publicUrl}
+                href={whatsAppUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="rounded-lg px-3 py-2 text-xs font-bold"
-                style={{ backgroundColor: ctaColor, color: primaryTextColor, fontFamily: fonts.heading }}
+                style={{ backgroundColor: "#25D366", color: "#052E16", fontFamily: fonts.heading }}
               >
-                {ctaLabel}
+                WhatsApp {whatsAppDisplay ? `(${whatsAppDisplay})` : ""}
               </a>
-              <span
-                className="rounded-lg border px-3 py-2 text-xs"
-                style={{
-                  borderColor: panelSoftBorderColor,
-                  backgroundColor: panelMutedBackground,
-                  color: pageSoftText,
-                  fontFamily: fonts.body,
-                }}
-              >
-                Moneda: {landing.profile.moneda || "COP"}
-              </span>
-            </div>
+            ) : null}
+            <span
+              className="rounded-lg border px-3 py-2 text-xs"
+              style={{
+                borderColor: panelSoftBorderColor,
+                backgroundColor: panelMutedBackground,
+                color: pageSoftText,
+                fontFamily: fonts.body,
+              }}
+            >
+              Moneda: {landing.profile.moneda || "COP"}
+            </span>
           </div>
         </article>
       </section>
