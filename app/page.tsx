@@ -30,6 +30,8 @@ const brand = {
   name: "BARBERAGENCY",
   whatsapp: "https://wa.me/573001112233",
 };
+const REGISTER_BARBERIA_URL =
+  "https://barberagency-barberagency.gymh5g.easypanel.host/registro-barberias/";
 
 const benefits: BenefitItem[] = [
   {
@@ -112,10 +114,13 @@ export default function Home() {
 
           <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
             <ThemeToggle />
-            <Link href="/barberia" className="btn btn-primary">
+            <a href={REGISTER_BARBERIA_URL} className="btn btn-secondary">
+              Registrate
+            </a>
+            <a href={REGISTER_BARBERIA_URL} className="btn btn-primary">
               Empezar ahora
               <ArrowRight className="size-4" />
-            </Link>
+            </a>
           </div>
         </div>
       </header>
@@ -167,10 +172,10 @@ export default function Home() {
               <MessageCircle className="size-4" />
               Agendar llamada
             </a>
-            <Link href="/barberia" className="btn btn-secondary">
+            <a href={REGISTER_BARBERIA_URL} className="btn btn-secondary">
               Crear mi barberia
               <ArrowRight className="size-4" />
-            </Link>
+            </a>
           </div>
         </article>
 
@@ -294,10 +299,10 @@ export default function Home() {
                 Hablar por WhatsApp
                 <MessageCircle className="size-4" />
               </a>
-              <Link href="/barberia" className="btn btn-primary">
+              <a href={REGISTER_BARBERIA_URL} className="btn btn-primary">
                 Empezar configuracion
                 <ArrowRight className="size-4" />
-              </Link>
+              </a>
             </div>
           </div>
         </div>
