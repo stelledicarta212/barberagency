@@ -190,6 +190,8 @@ export default async function PublicBookingPage(context: PageContext) {
   const qrUrl = buildQrImageUrl(publicUrl);
   const heroImage =
     clean(branding?.heroImageUrl) || landing.profile.coverUrl || "/Fondoiniciodshb.jpg";
+  const secondaryImage = clean(branding?.secondaryImageUrl) || heroImage;
+  const tertiaryImage = clean(branding?.tertiaryImageUrl) || secondaryImage || heroImage;
   const logoImage = landing.profile.logoUrl || "/welcome-card-image.png";
   const whatsAppSource = clean(landing.profile.whatsapp) || clean(landing.profile.telefono);
   const whatsAppUrl = buildWhatsAppUrl(whatsAppSource, landing.profile.nombrePublico);
@@ -456,26 +458,33 @@ export default async function PublicBookingPage(context: PageContext) {
 
       <section className="mx-auto mt-5 grid w-full max-w-7xl gap-4 px-4 sm:px-6 lg:grid-cols-[1fr_1fr_0.9fr] lg:px-8">
         <article
-          className="rounded-2xl border p-4"
+          className="overflow-hidden rounded-2xl border"
           style={{
             borderColor: panelBorderColor,
             backgroundColor: panelBackground,
             color: panelTextColor,
           }}
         >
-          <p
-            className="text-xs font-semibold uppercase tracking-[0.2em]"
-            style={{ color: pageSoftText, fontFamily: fonts.body }}
-          >
-            Servicios disponibles
-          </p>
-          <div className="mt-3 space-y-2">
+          <div className="relative h-28">
+            <img src={secondaryImage} alt="Servicios de la barberia" className="h-full w-full object-cover" />
+            <div
+              className="absolute inset-0"
+              style={{ background: `linear-gradient(180deg, transparent 0%, ${hexToRgba("#020617", 0.72)} 100%)` }}
+            />
+            <p
+              className="absolute bottom-3 left-4 text-xs font-semibold uppercase tracking-[0.2em]"
+              style={{ color: "#F8FAFC", fontFamily: fonts.body }}
+            >
+              Servicios disponibles
+            </p>
+          </div>
+          <div className="space-y-2 p-4">
             {landing.services.length === 0 ? (
               <p className="text-sm" style={{ color: pageSoftText }}>
                 Pronto publicaremos el catalogo de servicios de esta barberia.
               </p>
             ) : (
-              landing.services.map((service) => (
+              landing.services.slice(0, 4).map((service) => (
                 <div
                   key={service.id}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
@@ -497,20 +506,27 @@ export default async function PublicBookingPage(context: PageContext) {
         </article>
 
         <article
-          className="rounded-2xl border p-4"
+          className="overflow-hidden rounded-2xl border"
           style={{
             borderColor: panelBorderColor,
             backgroundColor: panelBackground,
             color: panelTextColor,
           }}
         >
-          <p
-            className="text-xs font-semibold uppercase tracking-[0.2em]"
-            style={{ color: pageSoftText, fontFamily: fonts.body }}
-          >
-            Contacto rapido
-          </p>
-          <div className="mt-3 space-y-2 text-sm">
+          <div className="relative h-28">
+            <img src={tertiaryImage} alt="Contacto barberia" className="h-full w-full object-cover" />
+            <div
+              className="absolute inset-0"
+              style={{ background: `linear-gradient(180deg, transparent 0%, ${hexToRgba("#020617", 0.72)} 100%)` }}
+            />
+            <p
+              className="absolute bottom-3 left-4 text-xs font-semibold uppercase tracking-[0.2em]"
+              style={{ color: "#F8FAFC", fontFamily: fonts.body }}
+            >
+              Contacto rapido
+            </p>
+          </div>
+          <div className="space-y-2 p-4 text-sm">
             {landing.profile.telefono ? <p>Telefono: {landing.profile.telefono}</p> : null}
             {landing.profile.whatsapp ? <p>WhatsApp: {landing.profile.whatsapp}</p> : null}
             {landing.profile.direccion ? <p>Direccion: {landing.profile.direccion}</p> : null}
@@ -534,7 +550,7 @@ export default async function PublicBookingPage(context: PageContext) {
               href={whatsAppUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 inline-flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm font-bold transition hover:opacity-90"
+              className="mx-4 mb-4 mt-1 inline-flex w-[calc(100%-2rem)] items-center justify-center rounded-lg px-3 py-2 text-sm font-bold transition hover:opacity-90"
               style={{
                 backgroundColor: "#25D366",
                 color: "#052E16",
@@ -544,7 +560,7 @@ export default async function PublicBookingPage(context: PageContext) {
               Escribir por WhatsApp
             </a>
           ) : (
-            <p className="mt-3 text-xs" style={{ color: pageSoftText }}>
+            <p className="mx-4 mb-4 mt-1 text-xs" style={{ color: pageSoftText }}>
               Configura telefono o WhatsApp en tu perfil para activar este boton.
             </p>
           )}
@@ -588,103 +604,117 @@ export default async function PublicBookingPage(context: PageContext) {
 
       <section className="mx-auto mt-4 grid w-full max-w-7xl gap-4 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
         <article
-          className="rounded-2xl border p-4"
+          className="relative min-h-[300px] overflow-hidden rounded-2xl border"
           style={{
             borderColor: panelBorderColor,
             backgroundColor: panelBackground,
             color: panelTextColor,
           }}
         >
-          <p
-            className="text-xs font-semibold uppercase tracking-[0.2em]"
-            style={{ color: pageSoftText, fontFamily: fonts.body }}
-          >
-            Equipo disponible
-          </p>
-          <div className="mt-3 space-y-2">
+          <img src={secondaryImage} alt="Equipo disponible" className="absolute inset-0 h-full w-full object-cover" />
+          <div
+            className="absolute inset-0"
+            style={{ background: `linear-gradient(130deg, ${hexToRgba("#020617", 0.78)} 0%, ${hexToRgba("#020617", 0.58)} 45%, ${hexToRgba("#020617", 0.82)} 100%)` }}
+          />
+          <div className="relative z-10 p-4 sm:p-5">
+            <p
+              className="text-xs font-semibold uppercase tracking-[0.2em]"
+              style={{ color: heroBadgeColor, fontFamily: fonts.body }}
+            >
+              Equipo disponible
+            </p>
             {landing.barbers.length === 0 ? (
-              <p className="text-sm" style={{ color: pageSoftText }}>
+              <p className="mt-2 text-sm" style={{ color: heroBodyColor }}>
                 Aun no hay barberos publicados para reservas online.
               </p>
             ) : (
-              landing.barbers.map((barber) => (
-                <div
-                  key={barber.id}
-                  className="rounded-lg border px-3 py-2"
-                  style={{
-                    borderColor: panelSoftBorderColor,
-                    backgroundColor: panelMutedBackground,
-                  }}
-                >
-                  <p className="text-sm font-bold" style={{ fontFamily: fonts.heading }}>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {landing.barbers.slice(0, 8).map((barber) => (
+                  <span
+                    key={barber.id}
+                    className="rounded-full border px-3 py-1 text-xs font-semibold"
+                    style={{
+                      borderColor: hexToRgba("#FFFFFF", 0.34),
+                      backgroundColor: hexToRgba("#020617", 0.42),
+                      color: "#F8FAFC",
+                      fontFamily: fonts.body,
+                    }}
+                  >
                     {barber.nombre}
-                  </p>
-                  <p className="text-xs" style={{ color: pageSoftText }}>
-                    Barbero profesional
-                  </p>
-                </div>
-              ))
+                  </span>
+                ))}
+              </div>
             )}
           </div>
         </article>
 
         <article
-          className="rounded-2xl border p-4"
+          className="relative min-h-[300px] overflow-hidden rounded-2xl border"
           style={{
             borderColor: panelBorderColor,
             backgroundColor: panelBackground,
             color: panelTextColor,
           }}
         >
-          <p
-            className="text-xs font-semibold uppercase tracking-[0.2em]"
-            style={{ color: pageSoftText, fontFamily: fonts.body }}
-          >
-            Reserva directa
-          </p>
-          <p className="mt-2 text-sm" style={{ color: pageSoftText }}>
-            Comparte este enlace o agenda por WhatsApp para convertir visitas en citas.
-          </p>
-
-          <div className="mt-3 rounded-lg border p-3 text-sm" style={{ borderColor: panelSoftBorderColor }}>
-            <p className="font-semibold" style={{ fontFamily: fonts.heading }}>
-              URL publica
-            </p>
-            <p className="mt-1 break-all" style={{ color: pageSoftText }}>
-              {publicUrl}
-            </p>
-          </div>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            <a
-              href={publicUrl}
-              className="rounded-lg px-3 py-2 text-xs font-bold"
-              style={{ backgroundColor: ctaColor, color: primaryTextColor, fontFamily: fonts.heading }}
+          <img src={tertiaryImage} alt="Reserva directa" className="absolute inset-0 h-full w-full object-cover" />
+          <div
+            className="absolute inset-0"
+            style={{ background: `linear-gradient(122deg, ${hexToRgba("#020617", 0.74)} 0%, ${hexToRgba("#020617", 0.46)} 48%, ${hexToRgba("#020617", 0.84)} 100%)` }}
+          />
+          <div className="relative z-10 p-4 sm:p-5">
+            <p
+              className="text-xs font-semibold uppercase tracking-[0.2em]"
+              style={{ color: heroBadgeColor, fontFamily: fonts.body }}
             >
-              {ctaLabel}
-            </a>
-            {whatsAppUrl ? (
+              Reserva directa
+            </p>
+            <p className="mt-2 text-sm" style={{ color: heroBodyColor }}>
+              Comparte este enlace o agenda por WhatsApp para convertir visitas en citas.
+            </p>
+
+            <div
+              className="mt-3 rounded-lg border p-3 text-sm"
+              style={{ borderColor: hexToRgba("#FFFFFF", 0.25), backgroundColor: hexToRgba("#020617", 0.36) }}
+            >
+              <p className="font-semibold text-white" style={{ fontFamily: fonts.heading }}>
+                URL publica
+              </p>
+              <p className="mt-1 break-all" style={{ color: heroBodyColor }}>
+                {publicUrl}
+              </p>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
               <a
-                href={whatsAppUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={publicUrl}
                 className="rounded-lg px-3 py-2 text-xs font-bold"
-                style={{ backgroundColor: "#25D366", color: "#052E16", fontFamily: fonts.heading }}
+                style={{ backgroundColor: ctaColor, color: primaryTextColor, fontFamily: fonts.heading }}
               >
-                WhatsApp {whatsAppDisplay ? `(${whatsAppDisplay})` : ""}
+                {ctaLabel}
               </a>
-            ) : null}
-            <span
-              className="rounded-lg border px-3 py-2 text-xs"
-              style={{
-                borderColor: panelSoftBorderColor,
-                backgroundColor: panelMutedBackground,
-                color: pageSoftText,
-                fontFamily: fonts.body,
-              }}
-            >
-              Moneda: {landing.profile.moneda || "COP"}
-            </span>
+              {whatsAppUrl ? (
+                <a
+                  href={whatsAppUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg px-3 py-2 text-xs font-bold"
+                  style={{ backgroundColor: "#25D366", color: "#052E16", fontFamily: fonts.heading }}
+                >
+                  WhatsApp {whatsAppDisplay ? `(${whatsAppDisplay})` : ""}
+                </a>
+              ) : null}
+              <span
+                className="rounded-lg border px-3 py-2 text-xs"
+                style={{
+                  borderColor: hexToRgba("#FFFFFF", 0.24),
+                  backgroundColor: hexToRgba("#020617", 0.38),
+                  color: "#E2E8F0",
+                  fontFamily: fonts.body,
+                }}
+              >
+                Moneda: {landing.profile.moneda || "COP"}
+              </span>
+            </div>
           </div>
         </article>
       </section>
