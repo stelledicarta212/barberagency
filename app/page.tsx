@@ -117,10 +117,10 @@ export default function Home() {
             <a href={REGISTER_BARBERIA_URL} className="btn btn-secondary">
               Registrate
             </a>
-            <a href={REGISTER_BARBERIA_URL} className="btn btn-primary">
+            <Link href="/barberia" className="btn btn-primary">
               Empezar ahora
               <ArrowRight className="size-4" />
-            </a>
+            </Link>
           </div>
         </div>
       </header>
@@ -172,10 +172,10 @@ export default function Home() {
               <MessageCircle className="size-4" />
               Agendar llamada
             </a>
-            <a href={REGISTER_BARBERIA_URL} className="btn btn-secondary">
+            <Link href="/barberia" className="btn btn-secondary">
               Crear mi barberia
               <ArrowRight className="size-4" />
-            </a>
+            </Link>
           </div>
         </article>
 
@@ -299,10 +299,10 @@ export default function Home() {
                 Hablar por WhatsApp
                 <MessageCircle className="size-4" />
               </a>
-              <a href={REGISTER_BARBERIA_URL} className="btn btn-primary">
+              <Link href="/barberia" className="btn btn-primary">
                 Empezar configuracion
                 <ArrowRight className="size-4" />
-              </a>
+              </Link>
             </div>
           </div>
         </div>
