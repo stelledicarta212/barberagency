@@ -1,4 +1,4 @@
-import crypto from "node:crypto";
+﻿import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
@@ -98,6 +98,11 @@ type BarberoRow = {
 };
 
 const ONE_HOUR = 60 * 60;
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://barberagency-barberagency.gymh5g.easypanel.host",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+];
 
 function clean(value: unknown) {
   return (value ?? "").toString().trim();
@@ -124,6 +129,47 @@ function toBase64Url(input: Buffer | string) {
     .replace(/=/g, "")
     .replace(/\+/g, "-")
     .replace(/\//g, "_");
+}
+
+function getAllowedOrigins() {
+  const configured = clean(process.env.ONBOARDING_CORS_ORIGINS)
+    .split(",")
+    .map((value) => clean(value))
+    .filter(Boolean);
+
+  return configured.length > 0 ? configured : DEFAULT_ALLOWED_ORIGINS;
+}
+
+function buildCorsHeaders(request: Request) {
+  const origin = clean(request.headers.get("origin"));
+  const allowedOrigins = getAllowedOrigins();
+  const allowOrigin = allowedOrigins.includes(origin)
+    ? origin
+    : allowedOrigins[0];
+
+  return new Headers({
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Credentials": "true",
+    Vary: "Origin",
+  });
+}
+
+function mergeHeaders(base: Headers, extra?: HeadersInit) {
+  const headers = new Headers(base);
+  if (extra) {
+    const extraHeaders = new Headers(extra);
+    extraHeaders.forEach((value, key) => headers.set(key, value));
+  }
+  return headers;
+}
+
+function jsonWithCors(request: Request, body: unknown, init?: ResponseInit) {
+  return NextResponse.json(body, {
+    ...init,
+    headers: mergeHeaders(buildCorsHeaders(request), init?.headers),
+  });
 }
 
 function signPostgrestToken(
@@ -578,13 +624,22 @@ function dayToNumber(dayName: string) {
   return map[key] ?? 1;
 }
 
+export async function OPTIONS(request: Request) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: buildCorsHeaders(request),
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
     const session = verifySessionToken(token);
+
     if (session && session.role === "barbero") {
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         { ok: false, message: "Solo administrador puede modificar la configuracion de barberia." },
         { status: 403 },
       );
@@ -606,14 +661,16 @@ export async function POST(request: Request) {
     const adminPassword = (draft?.accesos?.admin?.password ?? "").toString();
 
     if (!nombreBarberia || !slug) {
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         { ok: false, message: "Nombre y slug de barberia son obligatorios." },
         { status: 400 },
       );
     }
 
     if (!isValidEmail(adminEmail) || adminPassword.length < 6) {
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         { ok: false, message: "Credenciales del administrador no validas." },
         { status: 400 },
       );
@@ -633,6 +690,7 @@ export async function POST(request: Request) {
       appRole: "admin",
       email: adminEmail,
     });
+
     const barberia = await ensureBarberia({
       ownerToken,
       ownerId: Number(adminUser.id),
@@ -644,6 +702,7 @@ export async function POST(request: Request) {
 
     const barberiaId = Number(barberia.id);
     const requestOrigin = new URL(request.url).origin;
+
     let publicLanding = {
       barberiaId,
       slug: barberia.slug,
@@ -653,6 +712,7 @@ export async function POST(request: Request) {
       publicUrl: buildPublicLandingUrl(requestOrigin, barberia.slug),
       qrUrl: buildQrImageUrl(buildPublicLandingUrl(requestOrigin, barberia.slug)),
     };
+
     let publicLandingWarning = "";
 
     try {
@@ -677,7 +737,7 @@ export async function POST(request: Request) {
     }
 
     const servicios = Array.isArray(draft?.servicios)
-      ? draft!.servicios
+      ? draft.servicios
           .filter((s) => clean(s.nombre))
           .map((s) => ({
             nombre: clean(s.nombre),
@@ -720,7 +780,7 @@ export async function POST(request: Request) {
     });
 
     const horarios = Array.isArray(draft?.horarios)
-      ? draft!.horarios
+      ? draft.horarios
           .filter((h) => Boolean(h.activo))
           .map((h) => ({
             barberia_id: barberiaId,
@@ -740,7 +800,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const activeBarberosWithAccess = (Array.isArray(draft?.barberos) ? draft!.barberos : [])
+    const activeBarberosWithAccess = (Array.isArray(draft?.barberos) ? draft.barberos : [])
       .map((barber, index) => {
         const access = draft?.accesos?.barberos?.[index];
         return {
@@ -763,6 +823,7 @@ export async function POST(request: Request) {
       if (!isValidEmail(barber.email) || barber.password.length < 6) {
         continue;
       }
+
       const user = await ensureUser({
         bootstrapToken,
         name: barber.nombre,
@@ -770,6 +831,7 @@ export async function POST(request: Request) {
         role: "barbero",
         password: barber.password,
       });
+
       barberosForInsert.push({
         barberia_id: barberiaId,
         nombre: barber.nombre,
@@ -779,6 +841,7 @@ export async function POST(request: Request) {
     }
 
     let barberosCreated = 0;
+
     try {
       await requestPostgrest<null>(`barberos?barberia_id=eq.${barberiaId}`, {
         method: "DELETE",
@@ -798,8 +861,6 @@ export async function POST(request: Request) {
         throw error;
       }
 
-      // Si ya hay citas apuntando a barberos existentes, evitamos borrado masivo
-      // y solo sincronizamos (update/insert) por usuario_id.
       if (barberosForInsert.length > 0) {
         barberosCreated = await upsertBarberosByUsuario({
           token: ownerToken,
@@ -809,7 +870,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({
+    return jsonWithCors(request, {
       ok: true,
       message: "Onboarding creado en BD correctamente.",
       admin: {
@@ -840,6 +901,10 @@ export async function POST(request: Request) {
         ? clean(error.message)
         : "No se pudo crear el onboarding en BD.";
 
-    return NextResponse.json({ ok: false, message }, { status: 400 });
+    return jsonWithCors(
+      request,
+      { ok: false, message },
+      { status: 400 },
+    );
   }
 }
